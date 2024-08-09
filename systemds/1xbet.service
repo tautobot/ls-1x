@@ -1,0 +1,16 @@
+[Unit]
+Description=1xbet.service
+After=network.target
+
+[Service]
+WorkingDirectory=/mount/src/emoji-shortcodes
+ExecStart=/mount/src/emoji-shortcodes/.venv/bin/python fetch_matches.py
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+IgnoreSIGPIPE=true
+Restart=always
+RestartSec=3
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
