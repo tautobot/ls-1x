@@ -45,17 +45,25 @@ with st.empty():
 
     def highlight_matches(row):
         if row.prediction:
-            if row.half == "1" and float(row.prediction) <= 3 and row.score in ('0 - 0', '0 - 1', '1 - 0'):
+            if row.half == "1" and float(row.cur_prediction) <= 3.5 and (
+                float(row.prediction) <= 2 and row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
+            ) or (
+                float(row.prediction) == 3 and row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
+            ):
                 if ':' in str(row.scores) and ':' in str(row.time_match):
                     if 0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(row.scores.split(',')[0]) <= 720:
                         return ['color: #FFA500; opacity: 0.5'] * len(row)
                 return ['color: #00FF00; opacity: 0.5'] * len(row)
 
-            if row.half == "2" and float(row.prediction) <= 3 and row.score in ('0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2'):
+            if (
+                row.half == "2" and
+                float(row.cur_prediction) <= 3.5 and
+                float(row.prediction) <= 3 and
+                row.score in ('0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
+            ):
                 if ':' in str(row.scores) and ':' in str(row.time_match):
                     if 0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(row.scores.split(',')[0]) <= 420:
                         return ['color: #FFA500; opacity: 0.5'] * len(row)
-
                 return ['color: #00FF00; opacity: 0.5'] * len(row)
 
             else:
