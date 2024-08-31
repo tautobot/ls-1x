@@ -55,7 +55,7 @@ with st.empty():
                         return ['color: #FFA500; opacity: 0.5'] * len(row)
                 return ['color: #00FF00; opacity: 0.5'] * len(row)
 
-            if (
+            elif (
                 row.half == "2" and
                 float(row.cur_prediction) <= 3.5 and
                 float(row.prediction) <= 3 and
