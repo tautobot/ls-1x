@@ -16,7 +16,7 @@ def fetch_emojis():
     json = resp.json()
     codes, emojis = zip(*json.items())
     return pd.DataFrame({
-        'Emojis': emojis,
+        'Emojis'    : emojis,
         'Shortcodes': [f':{code}:' for code in codes],
     })
 
@@ -30,6 +30,8 @@ def page_load():
         initial_sidebar_state="expanded"
     )
     st.header("1XBET", divider="rainbow")
+
+
 # End
 
 
@@ -42,19 +44,19 @@ def page_load():
 
 page_load()
 with st.empty():
-
     def highlight_matches(row):
         if row.prediction:
-            if row.half == "1":
+            if float(row.cur_prediction) > 3.5 or row.half not in ('1', '2'):
+                return ['color: '] * len(row)  # white
+            if row.half == '1':
                 if (
-                        float(row.cur_prediction) <= 3.5 and
                         (
                             float(row.prediction) <= 2.5 and
                             row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
                         ) or (
                             float(row.prediction) <= 3 and
                             row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
-                    )
+                        )
                 ):
                     if (
                             ':' in str(row.scores) and
@@ -66,9 +68,8 @@ with st.empty():
                         return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
                 else:
                     return ['color: '] * len(row)  # white
-            elif row.half == "2":
+            elif row.half == '2':
                 if (
-                        float(row.cur_prediction) <= 3.5 and
                         float(row.prediction) <= 3 and
                         row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
                 ):
@@ -83,8 +84,7 @@ with st.empty():
                         return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
                 else:
                     return ['color: '] * len(row)  # white
-            else:
-                return ['color: '] * len(row)  # white
+
 
     def load_data():
         try:
@@ -123,40 +123,40 @@ with st.empty():
                             df.style.apply(highlight_matches, axis=1),
                             height=(len(data) + 1) * 35 + 3,
                             column_config={
-                                "league": st.column_config.Column(
+                                "league"        : st.column_config.Column(
                                     label="League",
                                     width="medium"
                                 ),
-                                "team1": st.column_config.Column(
+                                "team1"         : st.column_config.Column(
                                     label="T1",
                                     width="small"
                                 ),
-                                "team2": st.column_config.Column(
+                                "team2"         : st.column_config.Column(
                                     label="T2",
                                     width="small"
                                 ),
-                                "h1_score": st.column_config.TextColumn(
+                                "h1_score"      : st.column_config.TextColumn(
                                     label="H1 Score",
                                     width="small"
                                 ),
-                                "half": st.column_config.Column(
+                                "half"          : st.column_config.Column(
                                     label="Half",
                                     width="small"
                                 ),
-                                "time_match": st.column_config.Column(
+                                "time_match"    : st.column_config.Column(
                                     label="Time",
                                     width="small"
                                 ),
-                                "score": st.column_config.TextColumn(
+                                "score"         : st.column_config.TextColumn(
                                     label="Score",
                                     width="small"
                                 ),
-                                "prediction": st.column_config.NumberColumn(
+                                "prediction"    : st.column_config.NumberColumn(
                                     label="Pre",
                                     format="%.1f",
                                     width="small"
                                 ),
-                                "h2_prediction": st.column_config.NumberColumn(
+                                "h2_prediction" : st.column_config.NumberColumn(
                                     label="H2 Pre",
                                     format="%.1f",
                                     width="small"
@@ -166,11 +166,11 @@ with st.empty():
                                     format="%.1f",
                                     width="small"
                                 ),
-                                "scores": st.column_config.TextColumn(
+                                "scores"        : st.column_config.TextColumn(
                                     label="Scored",
                                     width="medium"
                                 ),
-                                "url": st.column_config.LinkColumn(
+                                "url"           : st.column_config.LinkColumn(
                                     label="Link",
                                     display_text=f"Link",
                                     width="small"
@@ -184,6 +184,7 @@ with st.empty():
             logger.error('ConnectionResetError')
         return None
 
+
     every(15).seconds.do(load_data)
     load_data()
 
@@ -196,4 +197,3 @@ with st.empty():
     #     time.sleep(1)
     #
     # clear()
-
