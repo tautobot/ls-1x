@@ -48,7 +48,7 @@ with st.empty():
             if row.half == "1" and float(row.cur_prediction) <= 3.5 and (
                 float(row.prediction) <= 2.5 and row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
             ) or (
-                float(row.prediction) == 3 and row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
+                float(row.prediction) <= 3 and row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
             ):
                 if (
                         ':' in str(row.scores) and
