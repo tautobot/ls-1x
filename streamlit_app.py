@@ -50,10 +50,14 @@ with st.empty():
             ) or (
                 float(row.prediction) == 3 and row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
             ):
-                if ':' in str(row.scores) and ':' in str(row.time_match):
-                    if 0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(row.scores.split(',')[0]) <= 720:
-                        return ['color: #FFA500; opacity: 0.5'] * len(row)
-                return ['color: #00FF00; opacity: 0.5'] * len(row)
+                if (
+                        ':' in str(row.scores) and
+                        ':' in str(row.time_match) and
+                        0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(row.scores.split(',')[0]) <= 720
+                ):
+                    return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
+                else:
+                    return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
 
             elif (
                 row.half == "2" and
@@ -61,13 +65,16 @@ with st.empty():
                 float(row.prediction) <= 3 and
                 row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
             ):
-                if ':' in str(row.scores) and ':' in str(row.time_match):
-                    if 0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(row.scores.split(',')[0]) <= 600:
-                        return ['color: #FFA500; opacity: 0.5'] * len(row)
-                return ['color: #00FF00; opacity: 0.5'] * len(row)
-
+                if (
+                        ':' in str(row.scores) and
+                        ':' in str(row.time_match) and
+                        0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(row.scores.split(',')[0]) <= 600
+                ):
+                    return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
+                else:
+                    return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
             else:
-                return ['color: '] * len(row)
+                return ['color: '] * len(row)  # white
 
     def load_data():
         try:
