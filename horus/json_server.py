@@ -54,8 +54,11 @@ class JsonServerProcessor(object):
 
         return data
 
-    def get_all_matches(self):
-        url = f"{JSON_SERVER_BASE_URL}/{self.source}"
+    def get_all_matches(self, filters=None):
+        if filters is not None:
+            url = f"{JSON_SERVER_BASE_URL}/{self.source}?{filters}"
+        else:
+            url = f"{JSON_SERVER_BASE_URL}/{self.source}"
         # return response
         res_ = self._get(url, {})
 

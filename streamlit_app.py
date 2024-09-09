@@ -10,6 +10,8 @@ from operator import itemgetter
 from horus.json_server import JsonServerProcessor
 
 
+filters = None
+
 def fetch_emojis():
     resp = requests.get(
         'https://raw.githubusercontent.com/omnidan/node-emoji/master/lib/emoji.json')
@@ -21,7 +23,7 @@ def fetch_emojis():
     })
 
 
-# Begin streamlit UI
+# Begin streamlit UI Region
 def page_load():
     st.set_page_config(
         page_title="Livescore App",
@@ -29,21 +31,30 @@ def page_load():
         layout="wide",
         initial_sidebar_state="expanded"
     )
-    st.header("1XBET", divider="rainbow")
+    global filters
+    option = st.radio(
+        "Filters:",
+        ["Full", "1 Half", "2 Half"],
+        horizontal=True
+    )
+    if option == "Full":
+        filters = None
+        st.header("1X", divider="rainbow")
+        clear()
+    if option == "1 Half":
+        filters = "half=1"
+        st.header("1X-1H", divider="rainbow")
+        clear()
+    elif option == "2 Half":
+        filters = "half=2"
+        st.header("1X-2H", divider="rainbow")
+        clear()
 
-
-# End
-
-
-# # Create the flag file to stop the schedule in x8.py
-# open("stop_8x.flag", "w").close()
-# # Remove the flag file to start the schedule in x1.py
-# if os.path.exists("stop_1x.flag"):
-#     os.remove("stop_1x.flag")
-
+# End Region
 
 page_load()
 with st.empty():
+
     def highlight_matches(row):
         if row.prediction:
             if float(row.cur_prediction) > 3.5 or row.half not in ('1', '2'):
@@ -88,9 +99,11 @@ with st.empty():
 
     def load_data():
         try:
-            # url = f"{JSON_SERVER_BASE_URL}/1x/"
-            # response = requests.request("GET", url, headers={}, data={})
-            res = JsonServerProcessor(source='1x', params={'skip_convert_data_types': True}).get_all_matches()
+            JsonServer = JsonServerProcessor(source='1x', params={'skip_convert_data_types': True})
+            if filters is not None:
+                res = JsonServer.get_all_matches(filters)
+            else:
+                res = JsonServer.get_all_matches()
             if res.get('success'):
                 data = res.get('data') or []
                 data = utils.sort_json(data, keys=itemgetter('half', 'time_match'))
@@ -190,7 +203,7 @@ with st.empty():
 
     while 1:
         run_pending()
-        time.sleep(1)
+        time.sleep(15)
 
     # while not os.path.exists("stop_1x.flag"):
     #     run_pending()
