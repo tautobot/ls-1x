@@ -101,7 +101,7 @@ with st.empty():
         try:
             JsonServer = JsonServerProcessor(source='1x', params={'skip_convert_data_types': True})
             if filters is not None:
-                res = JsonServer.get_all_matches(filters)
+                res = JsonServer.get_all_matches(f"{filters}&risk=0")
             else:
                 res = JsonServer.get_all_matches()
             if res.get('success'):
