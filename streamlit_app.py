@@ -32,21 +32,38 @@ def page_load():
         initial_sidebar_state="expanded"
     )
     global filters
-    option = st.radio(
+    option1 = st.radio(
+        "Filters:",
+        ["All", "Potential Match"],
+        horizontal=True
+    )
+    if option1 == "All":
+        filters = None
+        clear()
+    if option1 == "Potential Match":
+        filters = "?risk=0"
+        clear()
+
+    option2 = st.radio(
         "Filters:",
         ["Full", "1 Half", "2 Half"],
         horizontal=True
     )
-    if option == "Full":
-        filters = None
+    if option2 == "Full":
         st.header("1X", divider="rainbow")
         clear()
-    if option == "1 Half":
-        filters = "half=1"
+    if option2 == "1 Half":
+        if filters:
+            filters += "&half=1"
+        else:
+            filters = "?half=1"
         st.header("1X-1H", divider="rainbow")
         clear()
-    elif option == "2 Half":
-        filters = "half=2"
+    elif option2 == "2 Half":
+        if filters:
+            filters += "&half=2"
+        else:
+            filters = "?half=2"
         st.header("1X-2H", divider="rainbow")
         clear()
 
