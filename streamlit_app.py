@@ -130,7 +130,10 @@ with st.empty():
                                 "h2_prediction",
                                 "cur_prediction",
                                 "scores",
-                                "url")
+                                "url",
+                                "ext1",
+                                "ext2",
+                            )
                         )  # .sort_values(by='time_match', ascending=False)
                         st.dataframe(
                             df.style.apply(highlight_matches, axis=1),
