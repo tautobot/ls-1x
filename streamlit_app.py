@@ -148,8 +148,9 @@ with st.empty():
                                 "cur_prediction",
                                 "scores",
                                 "url",
-                                "ext1",
-                                "ext2",
+                                "id",
+                                "stat_id",
+                                "status",
                             )
                         )  # .sort_values(by='time_match', ascending=False)
                         st.dataframe(
@@ -207,8 +208,7 @@ with st.empty():
                                     label="Link",
                                     display_text=f"Link",
                                     width="small"
-                                ),
-
+                                )
                             }
                         )
         except requests.exceptions.RequestException as e:
