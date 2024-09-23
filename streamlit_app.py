@@ -32,6 +32,9 @@ def page_load():
         initial_sidebar_state="expanded"
     )
     global filters
+    global page_num
+    global page_size
+
     option1 = st.radio(
         "Filters:",
         ["All", "Potential Match"],
@@ -49,6 +52,10 @@ def page_load():
         ["Full", "1 Half", "2 Half"],
         horizontal=True
     )
+
+    page_num = st.sidebar.number_input("Page Number", min_value=1, value=1)
+    page_size = st.sidebar.number_input("Page Size", min_value=1, value=20)
+
     if option2 == "Full":
         st.header("1X", divider="rainbow")
         clear()
@@ -114,6 +121,14 @@ with st.empty():
                     return ['color: '] * len(row)  # white
 
 
+    def paginate_dataframe(dataframe, page_size, page_num):
+        page_size = page_size
+        if page_size is None:
+            return None
+
+        offset = page_size * (page_num - 1)
+        return dataframe[offset:offset + page_size]
+
     def load_data():
         try:
             JsonServer = JsonServerProcessor(source='1x', params={'skip_convert_data_types': True})
@@ -153,9 +168,34 @@ with st.empty():
                                 "status",
                             )
                         )  # .sort_values(by='time_match', ascending=False)
+
+                        # # Initialize variables
+                        # page_num = st.sidebar.number_input("Page Number", min_value=1, value=1,
+                        #                                    key='page_num')
+                        # rows_per_page = st.sidebar.number_input("Rows Per Page", min_value=1, value=50,
+                        #                                         key='rows_per_page')
+                        # total_pages = (len(df) - 1) // rows_per_page + 50
+                        #
+                        # start_idx = (page_num - 1) * rows_per_page
+                        # end_idx = min(start_idx + rows_per_page, len(df))
+                        # page_num = 1
+                        # rows_per_page = 50
+                        # total_pages = (len(df) - 1) // rows_per_page + 1
+                        # if st.sidebar.button("Previous"):
+                        #     if page_num > 1:
+                        #         page_num -= 1
+                        #
+                        # if st.sidebar.button("Next"):
+                        #     if page_num < total_pages:
+                        #         page_num += 1
+                        total_pages = (len(df) - 1) // page_size + 1
+                        st.text(total_pages)
+                        df = paginate_dataframe(df, page_size, page_num)
+
                         st.dataframe(
+                            # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
                             df.style.apply(highlight_matches, axis=1),
-                            height=(len(data) + 1) * 35 + 3,
+                            height=(len(df) + 1) * 35 + 3,
                             column_config={
                                 "league"        : st.column_config.Column(
                                     label="League",
