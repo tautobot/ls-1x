@@ -56,6 +56,10 @@ def page_load():
     page_num = st.sidebar.number_input("Page Number", min_value=1, value=1)
     page_size = st.sidebar.number_input("Page Size", min_value=1, value=20)
 
+    # Create text input boxes for "TOK" and "UID" in the sidebar
+    tok = st.sidebar.text_input("TOK", "")
+    uid = st.sidebar.text_input("UID", "")
+
     if option2 == "Full":
         st.header("1X", divider="rainbow")
         clear()
@@ -149,7 +153,7 @@ with st.empty():
 
                     if paginated_data:
                         df = pd.DataFrame(
-                            data=data,
+                            data=paginated_data,
                             columns=(
                                 "league",
                                 "team1",
