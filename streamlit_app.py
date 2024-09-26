@@ -283,7 +283,6 @@ with st.empty():
                     if st.session_state["clicked"]:
                         st.success("Done!")
                         utils.write_json_w_path([], f'{CODE_HOME}/tmp/test.json')
-                        st.rerun()
 
         except requests.exceptions.RequestException as e:
             logger.error(f'RequestException: {e}')
