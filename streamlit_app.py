@@ -4,7 +4,7 @@ import streamlit as st
 import requests
 import pandas as pd
 from horus import utils
-from horus.config import logger, CODE_HOME
+from horus.config import logger, TEMP_FOLDER
 from schedule import every, run_pending, clear
 from operator import itemgetter
 from horus.json_server import JsonServerProcessor
@@ -262,13 +262,13 @@ with st.empty():
                         for d in selected_data:
                             print(f"d:{d}")
                             json_data.append(d)
-                        utils.insert_data_into_json_w_path(json_data, f'{CODE_HOME}/tmp/test.json')
+                        utils.insert_data_into_json_w_path(json_data, f'{TEMP_FOLDER}/test.json')
 
                 with compare:
                     def onClick():
                         st.session_state["clicked"] = True
 
-                    existing_data = utils.read_json_w_file_path(f'{CODE_HOME}/tmp/test.json')
+                    existing_data = utils.read_json_w_file_path(f'{TEMP_FOLDER}/test.json')
                     selected_df = covert_json_to_dataframe(existing_data)
                     st.dataframe(
                         selected_df.style.apply(highlight_matches, axis=1),
@@ -282,7 +282,7 @@ with st.empty():
                     st.button("Clear", on_click=onClick, key=time.time())
                     if st.session_state["clicked"]:
                         st.success("Done!")
-                        utils.write_json_w_path([], f'{CODE_HOME}/tmp/test.json')
+                        utils.write_json_w_path([], f'{TEMP_FOLDER}/test.json')
 
         except requests.exceptions.RequestException as e:
             logger.error(f'RequestException: {e}')

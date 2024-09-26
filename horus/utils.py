@@ -1288,43 +1288,6 @@ def pagination(array, page, limit):
 
 
 if __name__ == "__main__":
-    j=[
-    {
-        "league": "Championship Brazil U23",
-        "team1": "Botafogo de Futebol e Regatas U23",
-        "team2": "Vasco da Gama U23",
-        "h1_score": None,
-        "half": "1",
-        "time_match": "32:16",
-        "score": "0 - 0",
-        "prediction": "2.5",
-        "h2_prediction": None,
-        "cur_prediction": "2",
-        "scores": None,
-        "url": "https://1xbet.mobi/en/live/football/1554891-championship-brazil-u23/561245281",
-        "id": "561245281",
-        "stat_id": "66ea63030d8c0bfbf10fff05",
-        "status": "on_going_h1"
-    },{
-        "league": "Championship Brazil U23",
-        "team1": "Botafogo de Futebol e Regatas U23",
-        "team2": "Vasco da Gama U23",
-        "h1_score": None,
-        "half": "1",
-        "time_match": "32:16",
-        "score": "0 - 0",
-        "prediction": "2.5",
-        "h2_prediction": None,
-        "cur_prediction": "2",
-        "scores": None,
-        "url": "https://1xbet.mobi/en/live/football/1554891-championship-brazil-u23/561245282",
-        "id": "561245282",
-        "stat_id": "66ea63030d8c0bfbf10fff05",
-        "status": "on_going_h1"
-    }
-    ]
-    insert_data_into_json_w_path(j, '/Users/trieutruong/github/ls-1x/tmp/test.json')
-    print(read_json_w_file_path('/Users/trieutruong/github/ls-1x/tmp/test.json'))
 
     # Example usage
     # import asyncio
