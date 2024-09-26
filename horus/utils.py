@@ -644,12 +644,8 @@ def is_integer(n):
 
 def read_json_w_file_path(file_path):
     # Opening JSON file
-    f = open(file_path)
-    # returns JSON object as
-    # a dictionary
-    data = json.load(f)
-    # Closing file
-    f.close()
+    with open(file_path, 'r') as file:
+        data = json.load(file)
     return data
 
 
