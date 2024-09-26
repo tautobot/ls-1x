@@ -10,6 +10,8 @@ python = "^3.10"
 schedule = "^1.2.1"
 streamlit = "^1.34.0"
 python-dotenv = "^1.0.1"
+extra-streamlit-components = "^0.1.71"
+itables = "^2.2.1"
 
 [build-system]
 requires = ["poetry-core"]

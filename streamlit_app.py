@@ -1,27 +1,17 @@
 import time
-import os
+import json
 import streamlit as st
 import requests
 import pandas as pd
 from horus import utils
-from horus.config import logger, JSON_SERVER_BASE_URL
+from horus.config import logger, CODE_HOME
 from schedule import every, run_pending, clear
 from operator import itemgetter
 from horus.json_server import JsonServerProcessor
 
 
 filters = None
-
-def fetch_emojis():
-    resp = requests.get(
-        'https://raw.githubusercontent.com/omnidan/node-emoji/master/lib/emoji.json')
-    json = resp.json()
-    codes, emojis = zip(*json.items())
-    return pd.DataFrame({
-        'Emojis'    : emojis,
-        'Shortcodes': [f':{code}:' for code in codes],
-    })
-
+column_config = None
 
 # Begin streamlit UI Region
 def page_load():
@@ -34,6 +24,7 @@ def page_load():
     global filters
     global page_num
     global page_size
+    global column_config
 
     option1 = st.radio(
         "Filters:",
@@ -54,7 +45,8 @@ def page_load():
     )
 
     page_num = st.sidebar.number_input("Page Number", min_value=1, value=1)
-    page_size = st.sidebar.number_input("Page Size", min_value=1, value=20)
+    # page_size = st.sidebar.number_input("Page Size", min_value=1, value=20)
+    page_size = st.sidebar.selectbox("Page Size", options=[10, 25, 50, 100], index=2)
 
     # Create text input boxes for "TOK" and "UID" in the sidebar
     tok = st.sidebar.text_input("TOK", "")
@@ -78,6 +70,73 @@ def page_load():
         st.header("1X-2H", divider="rainbow")
         clear()
 
+    # bottom_menu = st.columns((4, 1, 1))
+    # with bottom_menu[2]:
+    #     batch_size = st.selectbox("Page Size", options=[10, 25, 50, 100])
+    # with bottom_menu[1]:
+    #     total_pages = (
+    #         int(len(data) / batch_size) if int(len(data) / batch_size) > 0 else 1
+    #     )
+    #     current_page = st.number_input(
+    #         "Page", min_value=1, max_value=total_pages, step=1
+    #     )
+    # with bottom_menu[0]:
+    #     st.markdown(f"Page **{current_page}** of **{total_pages}** ")
+
+    column_config = {
+        "league"        : st.column_config.Column(
+            label="League",
+            width="medium"
+        ),
+        "team1"         : st.column_config.Column(
+            label="T1",
+            width="small"
+        ),
+        "team2"         : st.column_config.Column(
+            label="T2",
+            width="small"
+        ),
+        "h1_score"      : st.column_config.TextColumn(
+            label="H1 Score",
+            width="small"
+        ),
+        "half"          : st.column_config.Column(
+            label="Half",
+            width="small"
+        ),
+        "time_match"    : st.column_config.Column(
+            label="Time",
+            width="small"
+        ),
+        "score"         : st.column_config.TextColumn(
+            label="Score",
+            width="small"
+        ),
+        "prediction"    : st.column_config.NumberColumn(
+            label="Pre",
+            format="%.1f",
+            width="small"
+        ),
+        "h2_prediction" : st.column_config.NumberColumn(
+            label="H2 Pre",
+            format="%.1f",
+            width="small"
+        ),
+        "cur_prediction": st.column_config.NumberColumn(
+            label="Cur Pre",
+            format="%.1f",
+            width="small"
+        ),
+        "scores"        : st.column_config.TextColumn(
+            label="Scored",
+            width="medium"
+        ),
+        "url"           : st.column_config.LinkColumn(
+            label="Link",
+            display_text=f"Link",
+            width="small"
+        )
+    }
 # End Region
 
 page_load()
@@ -133,6 +192,28 @@ with st.empty():
         offset = page_size * (page_num - 1)
         return dataframe[offset:offset + page_size]
 
+    def covert_json_to_dataframe(j_data):
+        return pd.DataFrame(
+                    data=j_data,
+                    columns=(
+                        "league",
+                        "team1",
+                        "team2",
+                        "h1_score",
+                        "half",
+                        "time_match",
+                        "score",
+                        "prediction",
+                        "h2_prediction",
+                        "cur_prediction",
+                        "scores",
+                        "url",
+                        "id",
+                        "stat_id",
+                        "status",
+                    )
+                )
+
     def load_data():
         try:
             JsonServer = JsonServerProcessor(source='1x', params={'skip_convert_data_types': True})
@@ -143,118 +224,67 @@ with st.empty():
             if res.get('success'):
                 data = res.get('data') or []
                 data = utils.sort_json(data, keys=itemgetter('half', 'time_match'))
-                total_data = len(data)
-                count_data = 0
-                while total_data > count_data:
-                    page = 1  # Page number
-                    limit = 30  # Number of items per page
-                    paginated_data = utils.pagination(data, page, limit)
-                    count_data += len(paginated_data)
+                # total_data = len(data)
+                # count_data = 0
+                # while total_data > count_data:
+                #     page = 1  # Page number
+                #     limit = 30  # Number of items per page
+                #     paginated_data = utils.pagination(data, page, limit)
+                #     count_data += len(paginated_data)
+                #
+                #     if paginated_data:
+                df = covert_json_to_dataframe(data)
 
-                    if paginated_data:
-                        df = pd.DataFrame(
-                            data=paginated_data,
-                            columns=(
-                                "league",
-                                "team1",
-                                "team2",
-                                "h1_score",
-                                "half",
-                                "time_match",
-                                "score",
-                                "prediction",
-                                "h2_prediction",
-                                "cur_prediction",
-                                "scores",
-                                "url",
-                                "id",
-                                "stat_id",
-                                "status",
-                            )
-                        )  # .sort_values(by='time_match', ascending=False)
+                # total_pages = (len(df) - 1) // page_size + 1
+                # st.text(total_pages)
+                df = paginate_dataframe(df, page_size, page_num)
+                select, compare = st.tabs(["Matches", "Selected Matches"])
 
-                        # # Initialize variables
-                        # page_num = st.sidebar.number_input("Page Number", min_value=1, value=1,
-                        #                                    key='page_num')
-                        # rows_per_page = st.sidebar.number_input("Rows Per Page", min_value=1, value=50,
-                        #                                         key='rows_per_page')
-                        # total_pages = (len(df) - 1) // rows_per_page + 50
-                        #
-                        # start_idx = (page_num - 1) * rows_per_page
-                        # end_idx = min(start_idx + rows_per_page, len(df))
-                        # page_num = 1
-                        # rows_per_page = 50
-                        # total_pages = (len(df) - 1) // rows_per_page + 1
-                        # if st.sidebar.button("Previous"):
-                        #     if page_num > 1:
-                        #         page_num -= 1
-                        #
-                        # if st.sidebar.button("Next"):
-                        #     if page_num < total_pages:
-                        #         page_num += 1
-                        total_pages = (len(df) - 1) // page_size + 1
-                        st.text(total_pages)
-                        df = paginate_dataframe(df, page_size, page_num)
+                json_data = []
+                with select:
+                    event = st.dataframe(
+                        # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
+                        df.style.apply(highlight_matches, axis=1),
+                        use_container_width=True,
+                        hide_index=True,
+                        on_select="rerun",
+                        selection_mode="multi-row",
+                        height=(len(df) + 1) * 35 + 3,
+                        column_config=column_config
+                    )
 
-                        st.dataframe(
-                            # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
-                            df.style.apply(highlight_matches, axis=1),
-                            height=(len(df) + 1) * 35 + 3,
-                            column_config={
-                                "league"        : st.column_config.Column(
-                                    label="League",
-                                    width="medium"
-                                ),
-                                "team1"         : st.column_config.Column(
-                                    label="T1",
-                                    width="small"
-                                ),
-                                "team2"         : st.column_config.Column(
-                                    label="T2",
-                                    width="small"
-                                ),
-                                "h1_score"      : st.column_config.TextColumn(
-                                    label="H1 Score",
-                                    width="small"
-                                ),
-                                "half"          : st.column_config.Column(
-                                    label="Half",
-                                    width="small"
-                                ),
-                                "time_match"    : st.column_config.Column(
-                                    label="Time",
-                                    width="small"
-                                ),
-                                "score"         : st.column_config.TextColumn(
-                                    label="Score",
-                                    width="small"
-                                ),
-                                "prediction"    : st.column_config.NumberColumn(
-                                    label="Pre",
-                                    format="%.1f",
-                                    width="small"
-                                ),
-                                "h2_prediction" : st.column_config.NumberColumn(
-                                    label="H2 Pre",
-                                    format="%.1f",
-                                    width="small"
-                                ),
-                                "cur_prediction": st.column_config.NumberColumn(
-                                    label="Cur Pre",
-                                    format="%.1f",
-                                    width="small"
-                                ),
-                                "scores"        : st.column_config.TextColumn(
-                                    label="Scored",
-                                    width="medium"
-                                ),
-                                "url"           : st.column_config.LinkColumn(
-                                    label="Link",
-                                    display_text=f"Link",
-                                    width="small"
-                                )
-                            }
-                        )
+                    # st.header("Selected matches")
+                    matches = event.selection.rows
+                    filtered_df = df.iloc[matches]
+                    filtered_data = filtered_df.to_json(orient='records')
+                    selected_data = json.loads(filtered_data)
+                    if selected_data:
+                        for d in selected_data:
+                            print(f"d:{d}")
+                            json_data.append(d)
+                        utils.insert_data_into_json_w_path(json_data, f'{CODE_HOME}/tmp/test.json')
+
+                with compare:
+                    def onClick():
+                        st.session_state["clicked"] = True
+
+                    existing_data = utils.read_json_w_file_path(f'{CODE_HOME}/tmp/test.json')
+                    selected_df = covert_json_to_dataframe(existing_data)
+                    st.dataframe(
+                        selected_df.style.apply(highlight_matches, axis=1),
+                        key=time.time(),
+                        use_container_width=True,
+                        height=(len(existing_data) + 1) * 35 + 3,
+                        column_config=column_config
+                    )
+                    if "clicked" not in st.session_state:
+                        st.session_state["clicked"] = False
+                    st.button("Clear", on_click=onClick, key=time.time())
+                    if st.session_state["clicked"]:
+                        st.success("Done!")
+                        utils.write_json_w_path([], f'{CODE_HOME}/tmp/test.json')
+                        st.rerun()
+
         except requests.exceptions.RequestException as e:
             logger.error(f'RequestException: {e}')
         except ConnectionResetError:

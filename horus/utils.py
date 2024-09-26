@@ -674,7 +674,33 @@ def write_json(data):
 def write_json_w_path(data, file_path):
     with open(file_path, 'w') as outfile:
         json.dump(data, outfile)
-    outfile.close()
+
+
+def insert_data_into_json_w_path(j_data, file_path):
+    # Load existing data from data.json
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+
+    for d in [x for x in j_data if x['id'] not in [y['id'] for y in data]]:
+        # Append new JSON objects to the data list
+        data.append(d)
+
+    # Write the updated data back to data.json
+    with open(file_path, 'w') as file:
+        json.dump(data, file, indent=4)
+
+
+def json_loads(payload, k, v):
+    # Parse the JSON payload into a dictionary
+    payload_dict = json.loads(payload)
+
+    # Update the value of the key
+    payload_dict[k] = v
+
+    # Convert the updated dictionary back to JSON
+    updated_payload = json.dumps(payload_dict)
+
+    return updated_payload
 
 
 # def insert_items_json_w_path(items, file_path):
@@ -1262,6 +1288,44 @@ def pagination(array, page, limit):
 
 
 if __name__ == "__main__":
+    j=[
+    {
+        "league": "Championship Brazil U23",
+        "team1": "Botafogo de Futebol e Regatas U23",
+        "team2": "Vasco da Gama U23",
+        "h1_score": None,
+        "half": "1",
+        "time_match": "32:16",
+        "score": "0 - 0",
+        "prediction": "2.5",
+        "h2_prediction": None,
+        "cur_prediction": "2",
+        "scores": None,
+        "url": "https://1xbet.mobi/en/live/football/1554891-championship-brazil-u23/561245281",
+        "id": "561245281",
+        "stat_id": "66ea63030d8c0bfbf10fff05",
+        "status": "on_going_h1"
+    },{
+        "league": "Championship Brazil U23",
+        "team1": "Botafogo de Futebol e Regatas U23",
+        "team2": "Vasco da Gama U23",
+        "h1_score": None,
+        "half": "1",
+        "time_match": "32:16",
+        "score": "0 - 0",
+        "prediction": "2.5",
+        "h2_prediction": None,
+        "cur_prediction": "2",
+        "scores": None,
+        "url": "https://1xbet.mobi/en/live/football/1554891-championship-brazil-u23/561245282",
+        "id": "561245282",
+        "stat_id": "66ea63030d8c0bfbf10fff05",
+        "status": "on_going_h1"
+    }
+    ]
+    insert_data_into_json_w_path(j, '/Users/trieutruong/github/ls-1x/tmp/test.json')
+    print(read_json_w_file_path('/Users/trieutruong/github/ls-1x/tmp/test.json'))
+
     # Example usage
     # import asyncio
     #
