@@ -40,7 +40,7 @@ def page_load():
 
     option2 = st.radio(
         "Filters:",
-        ["All", "H1", "H2", "NS", "HT", "FT"],
+        ["All", "H1", "H2", "NS", "HT", "FT", "Unknown"],
         horizontal=True
     )
 
@@ -87,6 +87,9 @@ def page_load():
     elif option2 == "FT":
         filters = filters + f"&status={MatchStatus.ENDED}" if filters else f"?status={MatchStatus.ENDED}"
         st.header("Full Time", divider="rainbow")
+    elif option2 == "Unknown":
+        filters = filters + f"&status={MatchStatus.UNKNOWN}" if filters else f"?status={MatchStatus.UNKNOWN}"
+        st.header("Unknown", divider="rainbow")
 
     if filters:
         clear()
@@ -146,6 +149,7 @@ def page_load():
         )
     }
 # End Region
+
 
 page_load()
 with st.empty():
