@@ -32,6 +32,17 @@ class BotEnv(BaseEnum):
     PRODUCTION = 'production'
 
 
+class MatchStatus(BaseEnum):
+    NOT_STARTED   = 'not_started'  # A match is prepared for live but not started yet
+    ON_GOING_H1   = 'on_going_h1'  # A match is on going in the 1st half
+    EXTRA_TIME_H1 = 'ex_time_h1'   # A match is in extra time of the 1st half
+    HALF_TIME     = 'half_time'    # A match is in half-time
+    ON_GOING_H2   = 'on_going_h2'  # A match is on going in the 2nd half
+    EXTRA_TIME_H2 = 'ex_time_h2'   # A match is in extra time of the 2nd half
+    ENDED         = 'ended'        # A match ended
+    UNKNOWN       = 'unknown'      # A match is removed from Bookmaker
+
+
 class BotTypes:
     SCORES = 'scores'
     MOS = 'mos'

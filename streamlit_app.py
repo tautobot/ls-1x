@@ -8,10 +8,12 @@ from horus.config import logger, TEMP_FOLDER
 from schedule import every, run_pending, clear
 from operator import itemgetter
 from horus.json_server import JsonServerProcessor
+from horus.enums import MatchStatus
 
 
 filters = None
 column_config = None
+
 
 # Begin streamlit UI Region
 def page_load():
@@ -32,15 +34,13 @@ def page_load():
         horizontal=True
     )
     if option1 == "All":
-        filters = None
-        clear()
-    if option1 == "Potential Match":
+        filters = ''
+    elif option1 == "Potential Match":
         filters = "?risk=0"
-        clear()
 
     option2 = st.radio(
         "Filters:",
-        ["Full", "1 Half", "2 Half"],
+        ["All", "H1", "H2", "NS", "HT", "FT"],
         horizontal=True
     )
 
@@ -52,41 +52,49 @@ def page_load():
     tok = st.sidebar.text_input("TOK", "")
     uid = st.sidebar.text_input("UID", "")
 
-    if option2 == "Full":
-        st.header("1X", divider="rainbow")
-        clear()
-    if option2 == "1 Half":
-        if filters:
-            filters += "&half=1"
-        else:
-            filters = "?half=1"
-        st.header("1X-1H", divider="rainbow")
-        clear()
-    elif option2 == "2 Half":
-        if filters:
-            filters += "&half=2"
-        else:
-            filters = "?half=2"
-        st.header("1X-2H", divider="rainbow")
-        clear()
+    # if option2 == "Full":
+    #     st.header("1X", divider="rainbow")
+    #     clear()
+    # if option2 == "1 Half":
+    #     if filters:
+    #         filters += "&half=1"
+    #     else:
+    #         filters = "?half=1"
+    #     st.header("1X-1H", divider="rainbow")
+    #     clear()
+    # elif option2 == "2 Half":
+    #     if filters:
+    #         filters += "&half=2"
+    #     else:
+    #         filters = "?half=2"
+    #     st.header("1X-2H", divider="rainbow")
+    #     clear()
 
-    # bottom_menu = st.columns((4, 1, 1))
-    # with bottom_menu[2]:
-    #     batch_size = st.selectbox("Page Size", options=[10, 25, 50, 100])
-    # with bottom_menu[1]:
-    #     total_pages = (
-    #         int(len(data) / batch_size) if int(len(data) / batch_size) > 0 else 1
-    #     )
-    #     current_page = st.number_input(
-    #         "Page", min_value=1, max_value=total_pages, step=1
-    #     )
-    # with bottom_menu[0]:
-    #     st.markdown(f"Page **{current_page}** of **{total_pages}** ")
+    if option2 == "All":
+        st.header("All", divider="rainbow")
+    elif option2 == "H1":
+        filters = filters + f"&status={MatchStatus.ON_GOING_H1}&status={MatchStatus.EXTRA_TIME_H1}" if filters else f"?status={MatchStatus.ON_GOING_H1}&status={MatchStatus.EXTRA_TIME_H1}"
+        st.header("1st Half", divider="rainbow")
+    elif option2 == "H2":
+        filters = filters + f"&status={MatchStatus.ON_GOING_H2}&status={MatchStatus.EXTRA_TIME_H2}" if filters else f"?status={MatchStatus.ON_GOING_H2}&status={MatchStatus.EXTRA_TIME_H2}"
+        st.header("2nd Half", divider="rainbow")
+    elif option2 == "NS":
+        filters = filters + f"&status={MatchStatus.NOT_STARTED}" if filters else f"?status={MatchStatus.NOT_STARTED}"
+        st.header("Matches Not Started", divider="rainbow")
+    elif option2 == "HT":
+        filters = filters + f"&status={MatchStatus.HALF_TIME}" if filters else f"?status={MatchStatus.HALF_TIME}"
+        st.header("Half Time", divider="rainbow")
+    elif option2 == "FT":
+        filters = filters + f"&status={MatchStatus.ENDED}" if filters else f"?status={MatchStatus.ENDED}"
+        st.header("Full Time", divider="rainbow")
+
+    if filters:
+        clear()
 
     column_config = {
         "league"        : st.column_config.Column(
             label="League",
-            width="medium"
+            width="small"
         ),
         "team1"         : st.column_config.Column(
             label="T1",
@@ -208,8 +216,6 @@ with st.empty():
                         "cur_prediction",
                         "scores",
                         "url",
-                        "id",
-                        "stat_id",
                         "status",
                     )
                 )
@@ -238,51 +244,59 @@ with st.empty():
                 # total_pages = (len(df) - 1) // page_size + 1
                 # st.text(total_pages)
                 df = paginate_dataframe(df, page_size, page_num)
-                select, compare = st.tabs(["Matches", "Selected Matches"])
+                st.dataframe(
+                    # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
+                    df.style.apply(highlight_matches, axis=1),
+                    use_container_width=True,
+                    hide_index=False,
+                    height=(len(df) + 1) * 35 + 3,
+                    column_config=column_config
+                )
 
-                json_data = []
-                with select:
-                    event = st.dataframe(
-                        # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
-                        df.style.apply(highlight_matches, axis=1),
-                        use_container_width=True,
-                        hide_index=True,
-                        on_select="rerun",
-                        selection_mode="multi-row",
-                        height=(len(df) + 1) * 35 + 3,
-                        column_config=column_config
-                    )
-
-                    # st.header("Selected matches")
-                    matches = event.selection.rows
-                    filtered_df = df.iloc[matches]
-                    filtered_data = filtered_df.to_json(orient='records')
-                    selected_data = json.loads(filtered_data)
-                    if selected_data:
-                        for d in selected_data:
-                            print(f"d:{d}")
-                            json_data.append(d)
-                        utils.insert_data_into_json_w_path(json_data, f'{TEMP_FOLDER}/test.json')
-
-                with compare:
-                    def onClick():
-                        st.session_state["clicked"] = True
-
-                    existing_data = utils.read_json_w_file_path(f'{TEMP_FOLDER}/test.json')
-                    selected_df = covert_json_to_dataframe(existing_data)
-                    st.dataframe(
-                        selected_df.style.apply(highlight_matches, axis=1),
-                        key=time.time(),
-                        use_container_width=True,
-                        height=(len(existing_data) + 1) * 35 + 3,
-                        column_config=column_config
-                    )
-                    if "clicked" not in st.session_state:
-                        st.session_state["clicked"] = False
-                    st.button("Clear", on_click=onClick, key=time.time())
-                    if st.session_state["clicked"]:
-                        st.success("Done!")
-                        utils.write_json_w_path([], f'{TEMP_FOLDER}/test.json')
+                # select, compare = st.tabs(["Matches", "Selected Matches"])
+                # json_data = []
+                # with select:
+                #     event = st.dataframe(
+                #         # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
+                #         df.style.apply(highlight_matches, axis=1),
+                #         use_container_width=True,
+                #         hide_index=True,
+                #         on_select="rerun",
+                #         selection_mode="multi-row",
+                #         height=(len(df) + 1) * 35 + 3,
+                #         column_config=column_config
+                #     )
+                #
+                #     # st.header("Selected matches")
+                #     matches = event.selection.rows
+                #     filtered_df = df.iloc[matches]
+                #     filtered_data = filtered_df.to_json(orient='records')
+                #     selected_data = json.loads(filtered_data)
+                #     if selected_data:
+                #         for d in selected_data:
+                #             print(f"d:{d}")
+                #             json_data.append(d)
+                #         utils.insert_data_into_json_w_path(json_data, f'{TEMP_FOLDER}/test.json')
+                #
+                # with compare:
+                #     def onClick():
+                #         st.session_state["clicked"] = True
+                #
+                #     existing_data = utils.read_json_w_file_path(f'{TEMP_FOLDER}/test.json')
+                #     selected_df = covert_json_to_dataframe(existing_data)
+                #     st.dataframe(
+                #         selected_df.style.apply(highlight_matches, axis=1),
+                #         key=time.time(),
+                #         use_container_width=True,
+                #         height=(len(existing_data) + 1) * 35 + 3,
+                #         column_config=column_config
+                #     )
+                #     if "clicked" not in st.session_state:
+                #         st.session_state["clicked"] = False
+                #     st.button("Clear", on_click=onClick, key=time.time())
+                #     if st.session_state["clicked"]:
+                #         st.success("Done!")
+                #         utils.write_json_w_path([], f'{TEMP_FOLDER}/test.json')
 
         except requests.exceptions.RequestException as e:
             logger.error(f'RequestException: {e}')
