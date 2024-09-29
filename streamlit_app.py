@@ -221,7 +221,7 @@ with st.empty():
                         "scores",
                         "url",
                         "status",
-                        "freeze_time"
+                        "freeze_time",
                         "h1_url",
                     )
                 )
