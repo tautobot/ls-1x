@@ -146,7 +146,13 @@ def page_load():
             label="Link",
             display_text=f"Link",
             width="small"
+        ),
+        "h1_url": st.column_config.LinkColumn(
+            label="H1 Link",
+            display_text=f"H1 Link",
+            width="small"
         )
+
     }
 # End Region
 
@@ -220,9 +226,9 @@ with st.empty():
                         "cur_prediction",
                         "scores",
                         "url",
+                        "h1_url",
                         "status",
                         "freeze_time",
-                        "h1_url",
                     )
                 )
 
