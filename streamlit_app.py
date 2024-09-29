@@ -222,6 +222,7 @@ with st.empty():
                         "url",
                         "status",
                         "freeze_time"
+                        "h1_url",
                     )
                 )
 
