@@ -27,6 +27,7 @@ def page_load():
     global page_num
     global page_size
     global column_config
+    global data
 
     option1 = st.radio(
         "Filters:",
@@ -233,6 +234,7 @@ with st.empty():
                 )
 
     def load_data():
+        global data
         try:
             JsonServer = JsonServerProcessor(source='1x', params={'skip_convert_data_types': True})
             if filters is not None:
@@ -242,19 +244,8 @@ with st.empty():
             if res.get('success'):
                 data = res.get('data') or []
                 data = utils.sort_json(data, keys=itemgetter('half', 'time_match'))
-                # total_data = len(data)
-                # count_data = 0
-                # while total_data > count_data:
-                #     page = 1  # Page number
-                #     limit = 30  # Number of items per page
-                #     paginated_data = utils.pagination(data, page, limit)
-                #     count_data += len(paginated_data)
-                #
-                #     if paginated_data:
-                df = covert_json_to_dataframe(data)
 
-                # total_pages = (len(df) - 1) // page_size + 1
-                # st.text(total_pages)
+                df = covert_json_to_dataframe(data)
                 df = paginate_dataframe(df, page_size, page_num)
                 st.dataframe(
                     # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
@@ -262,7 +253,8 @@ with st.empty():
                     use_container_width=True,
                     hide_index=False,
                     height=(len(df) + 1) * 35 + 3,
-                    column_config=column_config
+                    column_config=column_config,
+                    key='live_matches'
                 )
 
                 # select, compare = st.tabs(["Matches", "Selected Matches"])
