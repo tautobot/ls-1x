@@ -1,11 +1,10 @@
 import time
-import json
-import streamlit as st
 import requests
 import pandas as pd
+import streamlit as st
 from horus import utils
-from horus.config import logger, TEMP_FOLDER
-from schedule import every, run_pending, clear
+from horus.config import logger
+from schedule import clear
 from operator import itemgetter
 from horus.json_server import JsonServerProcessor
 from horus.enums import MatchStatus
@@ -21,7 +20,7 @@ def page_load():
         page_title="Livescore App",
         page_icon=":soccer:",
         layout="wide",
-        initial_sidebar_state="expanded"
+        initial_sidebar_state="collapsed"
     )
     global filters
     global page_num
@@ -52,24 +51,6 @@ def page_load():
     # Create text input boxes for "TOK" and "UID" in the sidebar
     tok = st.sidebar.text_input("TOK", "")
     uid = st.sidebar.text_input("UID", "")
-
-    # if option2 == "Full":
-    #     st.header("1X", divider="rainbow")
-    #     clear()
-    # if option2 == "1 Half":
-    #     if filters:
-    #         filters += "&half=1"
-    #     else:
-    #         filters = "?half=1"
-    #     st.header("1X-1H", divider="rainbow")
-    #     clear()
-    # elif option2 == "2 Half":
-    #     if filters:
-    #         filters += "&half=2"
-    #     else:
-    #         filters = "?half=2"
-    #     st.header("1X-2H", divider="rainbow")
-    #     clear()
 
     if option2 == "All":
         st.header("All", divider="rainbow")
@@ -159,167 +140,175 @@ def page_load():
 
 
 page_load()
-with st.empty():
 
-    def highlight_matches(row):
-        if row.prediction:
-            if float(row.cur_prediction) > 3.5 or row.half not in ('1', '2'):
-                return ['color: '] * len(row)  # white
-            if row.half == '1':
-                if (
-                        (
+
+def highlight_matches(row):
+    if row.prediction:
+        if float(row.cur_prediction) > 3.5 or row.half not in ('1', '2'):
+            return ['color: '] * len(row)  # white
+        if row.half == '1':
+            if (
+                    (
                             float(row.prediction) <= 2.5 and
                             row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
-                        ) or (
-                            float(row.prediction) <= 3 and
-                            row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
-                        )
-                ):
-                    if (
-                            ':' in str(row.scores) and
-                            ':' in str(row.time_match) and
-                            0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(row.scores.split(',')[0]) <= 720
-                    ):
-                        return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
-                    else:
-                        return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
-                else:
-                    return ['color: '] * len(row)  # white
-            elif row.half == '2':
+                    ) or (
+                    float(row.prediction) <= 3 and
+                    row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
+            )
+            ):
                 if (
-                        float(row.prediction) <= 3 and
-                        row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
+                        ':' in str(row.scores) and
+                        ':' in str(row.time_match) and
+                        0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
+                    row.scores.split(',')[0]) <= 720
                 ):
-                    if (
-                            ':' in str(row.scores) and
-                            ':' in str(row.time_match) and
-                            0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
-                        row.scores.split(',')[0]) <= 600
-                    ):
-                        return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
-                    else:
-                        return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
+                    return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                 else:
-                    return ['color: '] * len(row)  # white
-
-
-    def paginate_dataframe(dataframe, page_size, page_num):
-        page_size = page_size
-        if page_size is None:
-            return None
-
-        offset = page_size * (page_num - 1)
-        return dataframe[offset:offset + page_size]
-
-    def covert_json_to_dataframe(j_data):
-        return pd.DataFrame(
-                    data=j_data,
-                    columns=(
-                        "id",
-                        "league",
-                        "team1",
-                        "team2",
-                        "h1_score",
-                        "half",
-                        "time_match",
-                        "score",
-                        "prediction",
-                        "h2_prediction",
-                        "cur_prediction",
-                        "scores",
-                        "status",
-                        "url",
-                        "h1_url",
-                        "quick_events_url",
-                        "freeze_time",
-                    )
-                )
-
-    def load_data():
-        global data
-        try:
-            JsonServer = JsonServerProcessor(source='1x', params={'skip_convert_data_types': True})
-            if filters is not None:
-                res = JsonServer.get_all_matches(filters)
+                    return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
             else:
-                res = JsonServer.get_all_matches()
-            if res.get('success'):
-                data = res.get('data') or []
-                data = utils.sort_json(data, keys=itemgetter('half', 'time_match'))
+                return ['color: '] * len(row)  # white
+        elif row.half == '2':
+            if (
+                    float(row.prediction) <= 3 and
+                    row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
+            ):
+                if (
+                        ':' in str(row.scores) and
+                        ':' in str(row.time_match) and
+                        0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
+                    row.scores.split(',')[0]) <= 600
+                ):
+                    return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
+                else:
+                    return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
+            else:
+                return ['color: '] * len(row)  # white
 
-                df = covert_json_to_dataframe(data)
-                df = paginate_dataframe(df, page_size, page_num)
-                st.dataframe(
-                    # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
-                    df.style.apply(highlight_matches, axis=1),
-                    use_container_width=True,
-                    hide_index=False,
-                    height=(len(df) + 1) * 35 + 3,
-                    column_config=column_config,
-                    key='live_matches'
-                )
 
-                # select, compare = st.tabs(["Matches", "Selected Matches"])
-                # json_data = []
-                # with select:
-                #     event = st.dataframe(
-                #         # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
-                #         df.style.apply(highlight_matches, axis=1),
-                #         use_container_width=True,
-                #         hide_index=True,
-                #         on_select="rerun",
-                #         selection_mode="multi-row",
-                #         height=(len(df) + 1) * 35 + 3,
-                #         column_config=column_config
-                #     )
-                #
-                #     # st.header("Selected matches")
-                #     matches = event.selection.rows
-                #     filtered_df = df.iloc[matches]
-                #     filtered_data = filtered_df.to_json(orient='records')
-                #     selected_data = json.loads(filtered_data)
-                #     if selected_data:
-                #         for d in selected_data:
-                #             print(f"d:{d}")
-                #             json_data.append(d)
-                #         utils.insert_data_into_json_w_path(json_data, f'{TEMP_FOLDER}/test.json')
-                #
-                # with compare:
-                #     def onClick():
-                #         st.session_state["clicked"] = True
-                #
-                #     existing_data = utils.read_json_w_file_path(f'{TEMP_FOLDER}/test.json')
-                #     selected_df = covert_json_to_dataframe(existing_data)
-                #     st.dataframe(
-                #         selected_df.style.apply(highlight_matches, axis=1),
-                #         key=time.time(),
-                #         use_container_width=True,
-                #         height=(len(existing_data) + 1) * 35 + 3,
-                #         column_config=column_config
-                #     )
-                #     if "clicked" not in st.session_state:
-                #         st.session_state["clicked"] = False
-                #     st.button("Clear", on_click=onClick, key=time.time())
-                #     if st.session_state["clicked"]:
-                #         st.success("Done!")
-                #         utils.write_json_w_path([], f'{TEMP_FOLDER}/test.json')
-
-        except requests.exceptions.RequestException as e:
-            logger.error(f'RequestException: {e}')
-        except ConnectionResetError:
-            logger.error('ConnectionResetError')
+def paginate_dataframe(dataframe, page_size, page_num):
+    page_size = page_size
+    if page_size is None:
         return None
 
+    offset = page_size * (page_num - 1)
+    return dataframe[offset:offset + page_size]
 
-    every(15).seconds.do(load_data)
-    load_data()
 
-    while 1:
-        run_pending()
-        time.sleep(15)
+def covert_json_to_dataframe(j_data):
+    return pd.DataFrame(
+        data=j_data,
+        columns=(
+            "id",
+            "league",
+            "team1",
+            "team2",
+            "h1_score",
+            "half",
+            "time_match",
+            "score",
+            "prediction",
+            "h2_prediction",
+            "cur_prediction",
+            "scores",
+            "status",
+            "url",
+            "h1_url",
+            "quick_events_url",
+            "freeze_time",
+        )
+    )
 
-    # while not os.path.exists("stop_1x.flag"):
-    #     run_pending()
-    #     time.sleep(1)
+
+# Function to simulate loading new data into the DataFrame
+def load_data():
+    try:
+        JsonServer = JsonServerProcessor(source='1x', params={'skip_convert_data_types': True})
+        if filters is not None:
+            res = JsonServer.get_all_matches(filters)
+        else:
+            res = JsonServer.get_all_matches()
+        if res.get('success'):
+            data = res.get('data') or []
+            data = utils.sort_json(data, keys=itemgetter('half', 'time_match'))
+
+            df = covert_json_to_dataframe(data)
+            df = paginate_dataframe(df, page_size, page_num)
+            return df
+    except requests.exceptions.RequestException as e:
+        logger.error(f'RequestException: {e}')
+    except ConnectionResetError:
+        logger.error('ConnectionResetError')
+    return None
+
+
+# Create a DataFrame to display
+df = pd.DataFrame(load_data())
+# Display the initial DataFrame table
+dataframe = st.dataframe(
+    df.style.apply(highlight_matches, axis=1),
+    use_container_width=True,
+    hide_index=False,
+    height=(len(df) + 1) * 35 + 3,
+    column_config=column_config,
+    key='live_matches'
+)
+
+
+# Update the DataFrame table every 10 seconds with new data
+while True:
+    time.sleep(10)
+    df = load_data()
+
+    dataframe.dataframe(
+        df.style.apply(highlight_matches, axis=1),
+        use_container_width=True,
+        hide_index=False,
+        height=(len(df) + 1) * 35 + 3,
+        column_config=column_config,
+        key='live_matches'
+    )
+
+    # select, compare = st.tabs(["Matches", "Selected Matches"])
+    # json_data = []
+    # with select:
+    #     event = st.dataframe(
+    #         # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
+    #         df.style.apply(highlight_matches, axis=1),
+    #         use_container_width=True,
+    #         hide_index=True,
+    #         on_select="rerun",
+    #         selection_mode="multi-row",
+    #         height=(len(df) + 1) * 35 + 3,
+    #         column_config=column_config
+    #     )
     #
-    # clear()
+    #     # st.header("Selected matches")
+    #     matches = event.selection.rows
+    #     filtered_df = df.iloc[matches]
+    #     filtered_data = filtered_df.to_json(orient='records')
+    #     selected_data = json.loads(filtered_data)
+    #     if selected_data:
+    #         for d in selected_data:
+    #             print(f"d:{d}")
+    #             json_data.append(d)
+    #         utils.insert_data_into_json_w_path(json_data, f'{TEMP_FOLDER}/test.json')
+    #
+    # with compare:
+    #     def onClick():
+    #         st.session_state["clicked"] = True
+    #
+    #     existing_data = utils.read_json_w_file_path(f'{TEMP_FOLDER}/test.json')
+    #     selected_df = covert_json_to_dataframe(existing_data)
+    #     st.dataframe(
+    #         selected_df.style.apply(highlight_matches, axis=1),
+    #         key=time.time(),
+    #         use_container_width=True,
+    #         height=(len(existing_data) + 1) * 35 + 3,
+    #         column_config=column_config
+    #     )
+    #     if "clicked" not in st.session_state:
+    #         st.session_state["clicked"] = False
+    #     st.button("Clear", on_click=onClick, key=time.time())
+    #     if st.session_state["clicked"]:
+    #         st.success("Done!")
+    #         utils.write_json_w_path([], f'{TEMP_FOLDER}/test.json')
