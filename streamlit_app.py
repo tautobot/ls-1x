@@ -241,22 +241,12 @@ def load_data():
     return None
 
 
-# Create a DataFrame to display
-df = pd.DataFrame(load_data())
 # Display the initial DataFrame table
-dataframe = st.dataframe(
-    df.style.apply(highlight_matches, axis=1),
-    use_container_width=True,
-    hide_index=False,
-    height=(len(df) + 1) * 35 + 3,
-    column_config=column_config,
-    key='live_matches'
-)
+dataframe = st.dataframe()
 
 
 # Update the DataFrame table every 10 seconds with new data
 while True:
-    time.sleep(10)
     df = load_data()
 
     dataframe.dataframe(
@@ -267,6 +257,8 @@ while True:
         column_config=column_config,
         key='live_matches'
     )
+
+    time.sleep(10)
 
     # select, compare = st.tabs(["Matches", "Selected Matches"])
     # json_data = []
