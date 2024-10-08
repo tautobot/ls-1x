@@ -215,6 +215,7 @@ with st.empty():
         return pd.DataFrame(
                     data=j_data,
                     columns=(
+                        "id",
                         "league",
                         "team1",
                         "team2",
@@ -226,9 +227,10 @@ with st.empty():
                         "h2_prediction",
                         "cur_prediction",
                         "scores",
+                        "status",
                         "url",
                         "h1_url",
-                        "status",
+                        "quick_events_url",
                         "freeze_time",
                     )
                 )
