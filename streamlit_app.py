@@ -258,7 +258,7 @@ while True:
         key='live_matches'
     )
 
-    time.sleep(10)
+    time.sleep(15)
 
     # select, compare = st.tabs(["Matches", "Selected Matches"])
     # json_data = []
