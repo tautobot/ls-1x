@@ -1,10 +1,11 @@
 import time
 import requests
+import json
 import pandas as pd
 import streamlit as st
 from horus import utils
 from horus.config import logger
-from schedule import clear
+# from schedule import clear
 from operator import itemgetter
 from horus.json_server import JsonServerProcessor
 from horus.enums import MatchStatus
@@ -45,7 +46,6 @@ def page_load():
     )
 
     page_num = st.sidebar.number_input("Page Number", min_value=1, value=1)
-    # page_size = st.sidebar.number_input("Page Size", min_value=1, value=20)
     page_size = st.sidebar.selectbox("Page Size", options=[10, 25, 50, 100], index=2)
 
     # Create text input boxes for "TOK" and "UID" in the sidebar
@@ -73,8 +73,8 @@ def page_load():
         filters = filters + f"&status={MatchStatus.UNKNOWN}" if filters else f"?status={MatchStatus.UNKNOWN}"
         st.header("Unknown", divider="rainbow")
 
-    if filters:
-        clear()
+    # if filters:
+    #     clear()
 
     column_config = {
         "league"        : st.column_config.Column(
@@ -133,8 +133,7 @@ def page_load():
             label="H1 Link",
             display_text=f"H1 Link",
             width="small"
-        )
-
+        ),
     }
 # End Region
 
@@ -241,40 +240,62 @@ def load_data():
     return None
 
 
+def callback(k):
+    edited_rows = st.session_state[k]["edited_rows"]
+    print(f"edited_rows: {edited_rows}")
+    rows_to_add = []
+    for idx, value in edited_rows.items():
+        if value["x"] is True:
+            rows_to_add.append(idx)
+    print(f"rows_to_add: {rows_to_add}")
+    print(f"rows_to_add: {edited_rows.items()}")
+    # selected_df.session_state["data"] = (
+    #     st.session_state["data"].drop(rows_to_add, axis=1).reset_index(drop=True)
+    # )
+    # with st.sidebar:
+    #     st.write("**Callback called**")
+    #     st.write(st.session_state.df)
+
+# Callback function to update session state
+# def update_selected_row(index):
+#     st.session_state.selected_row = index
+
+
 # Display the initial DataFrame table
 dataframe = st.dataframe()
-
+selected_df = st.dataframe()
 
 # Update the DataFrame table every 10 seconds with new data
 while True:
-    df = load_data()
+    key = time.time()
+    st.session_state.data = load_data()
+    modified_df = st.session_state["data"].copy()
+    modified_df["x"] = False
+    # Make Delete be the first column
+    modified_df = modified_df[["x"] + modified_df.columns[:-1].tolist()]
 
-    dataframe.dataframe(
-        df.style.apply(highlight_matches, axis=1),
+    dataframe.data_editor(
+        modified_df.style.apply(highlight_matches, axis=1),
         use_container_width=True,
-        hide_index=False,
-        height=(len(df) + 1) * 35 + 3,
+        height=(len(modified_df) + 1) * 35 + 3,
         column_config=column_config,
-        key='live_matches'
+        hide_index=True,
+        on_change=callback,
+        key=key,
+        args=[key],
     )
 
-    time.sleep(15)
 
-    # select, compare = st.tabs(["Matches", "Selected Matches"])
-    # json_data = []
+
+
+    # if st.session_state.selected_row is not None:
+    #     st.write('Selected Row:', dataframe.session_state.selected_row)
+
+    # select, compare = st.tabs(["Selected Matches", "Compared Matches"])
     # with select:
-    #     event = st.dataframe(
-    #         # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
-    #         df.style.apply(highlight_matches, axis=1),
-    #         use_container_width=True,
-    #         hide_index=True,
-    #         on_select="rerun",
-    #         selection_mode="multi-row",
-    #         height=(len(df) + 1) * 35 + 3,
-    #         column_config=column_config
-    #     )
+    #     if "df" not in st.session_state:
+    #         st.session_state["df"] = []
     #
-    #     # st.header("Selected matches")
     #     matches = event.selection.rows
     #     filtered_df = df.iloc[matches]
     #     filtered_data = filtered_df.to_json(orient='records')
@@ -283,8 +304,20 @@ while True:
     #         for d in selected_data:
     #             print(f"d:{d}")
     #             json_data.append(d)
-    #         utils.insert_data_into_json_w_path(json_data, f'{TEMP_FOLDER}/test.json')
-    #
+    #         st.session_state["df"] = json_data
+    #         # utils.insert_data_into_json_w_path(json_data, f'{TEMP_FOLDER}/test.json')
+    #     if st.session_state["df"]:
+    #         df = covert_json_to_dataframe(st.session_state["df"])
+    #         selected_df.dataframe(
+    #             df.style.apply(highlight_matches, axis=1),
+    #             use_container_width=True,
+    #             hide_index=False,
+    #             height=(len(st.session_state["df"]) + 1) * 35 + 3,
+    #             column_config=column_config,
+    #             key='selected_matches'
+    #         )
+    time.sleep(15)
+
     # with compare:
     #     def onClick():
     #         st.session_state["clicked"] = True
