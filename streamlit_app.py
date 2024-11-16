@@ -133,6 +133,11 @@ def page_load():
             label="H1 Link",
             display_text=f"H1 Link",
             width="small"
+        ),
+        "quick_events_url": st.column_config.LinkColumn(
+            label="QE Link",
+            display_text=f"QE Link",
+            width="small"
         )
 
     }
@@ -214,6 +219,7 @@ def covert_json_to_dataframe(j_data):
             "url",
             "h1_url",
             "quick_events_url",
+            "video",
             "freeze_time",
         )
     )
