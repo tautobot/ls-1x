@@ -120,6 +120,14 @@ def page_load():
             format="%.1f",
             width="small"
         ),
+        "team1_shots": st.column_config.TextColumn(
+            label="T1 Shots",
+            width="small"
+        ),
+        "team2_shots": st.column_config.TextColumn(
+            label="T2 Shots",
+            width="small"
+        ),
         "scores"        : st.column_config.TextColumn(
             label="Scored",
             width="medium"
@@ -214,6 +222,8 @@ def covert_json_to_dataframe(j_data):
             "prediction",
             "h2_prediction",
             "cur_prediction",
+            "team1_shots",
+            "team2_shots",
             "scores",
             "status",
             "url",
