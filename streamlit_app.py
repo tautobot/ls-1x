@@ -89,20 +89,20 @@ def page_load():
             label="T2",
             width="small"
         ),
-        "h1_score"      : st.column_config.TextColumn(
-            label="H1 Score",
-            width="small"
-        ),
         "half"          : st.column_config.Column(
             label="Half",
             width="small"
         ),
-        "time_match"    : st.column_config.Column(
-            label="Time",
+        "h1_score"      : st.column_config.TextColumn(
+            label="H1 Score",
             width="small"
         ),
         "score"         : st.column_config.TextColumn(
             label="Score",
+            width="small"
+        ),
+        "time_match"    : st.column_config.Column(
+            label="Time",
             width="small"
         ),
         "prediction"    : st.column_config.NumberColumn(
@@ -215,10 +215,10 @@ def covert_json_to_dataframe(j_data):
             "league",
             "team1",
             "team2",
-            "h1_score",
             "half",
-            "time_match",
+            "h1_score",
             "score",
+            "time_match",
             "prediction",
             "h2_prediction",
             "cur_prediction",
