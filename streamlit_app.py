@@ -159,6 +159,13 @@ def highlight_matches(row):
     if row.prediction:
         if float(row.cur_prediction) > 3.5 or row.half not in ('1', '2'):
             return ['color: '] * len(row)  # white
+
+        team1_shots = str(row.team1_shots) if pd.notna(row.team1_shots) else '0'
+        team2_shots = str(row.team2_shots) if pd.notna(row.team2_shots) else '0'
+        team1_shots_total = sum(int(x.strip()) for x in team1_shots.split('+') if x.strip().isdigit())
+        team2_shots_total = sum(int(x.strip()) for x in team2_shots.split('+') if x.strip().isdigit())
+        total_shots = team1_shots_total + team2_shots_total
+
         if row.half == '1':
             if (
                     (
@@ -176,15 +183,8 @@ def highlight_matches(row):
                     row.scores.split(',')[0]) <= 720
                 ):
                     # Calculate total shots for both teams in first half
-                    try:
-                        team1_shots = str(row.team1_shots) if pd.notna(row.team1_shots) else '0'
-                        team2_shots = str(row.team2_shots) if pd.notna(row.team2_shots) else '0'
-                        team1_shots_total = sum(int(x.strip()) for x in team1_shots.split('+') if x.strip().isdigit())
-                        team2_shots_total = sum(int(x.strip()) for x in team2_shots.split('+') if x.strip().isdigit())
-                        if team1_shots_total + team2_shots_total <= 11:
-                            return ['color: purple; opacity: 0.5'] * len(row)  # purple for matches meeting all conditions
-                    except (ValueError, AttributeError):
-                        pass  # If there's any error in processing shots, fall back to orange
+                    if total_shots <= 11 and total_shots > 0:
+                        return ['color: pink; opacity: 0.5'] * len(row)  # light pink for matches meeting all conditions
                     return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                 else:
                     return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
@@ -202,15 +202,8 @@ def highlight_matches(row):
                     row.scores.split(',')[0]) <= 600
                 ):
                     # Calculate total shots for both teams in second half
-                    try:
-                        team1_shots = str(row.team1_shots) if pd.notna(row.team1_shots) else '0'
-                        team2_shots = str(row.team2_shots) if pd.notna(row.team2_shots) else '0'
-                        team1_shots_total = sum(int(x.strip()) for x in team1_shots.split('+') if x.strip().isdigit())
-                        team2_shots_total = sum(int(x.strip()) for x in team2_shots.split('+') if x.strip().isdigit())
-                        if team1_shots_total + team2_shots_total <= 22:
-                            return ['color: purple; opacity: 0.5'] * len(row)  # purple for matches meeting all conditions
-                    except (ValueError, AttributeError):
-                        pass  # If there's any error in processing shots, fall back to orange
+                    if total_shots <= 22 and total_shots > 0:
+                        return ['color: pink; opacity: 0.5'] * len(row)  # light pink for matches meeting all conditions
                     return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                 else:
                     return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
