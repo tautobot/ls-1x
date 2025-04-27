@@ -184,7 +184,7 @@ def highlight_matches(row):
                 ):
                     # Calculate total shots for both teams in first half
                     if total_shots <= 11 and total_shots > 0:
-                        return ['color: #E6E6FA; opacity: 0.5'] * len(row)  # light purple for matches meeting all conditions
+                        return ['color: cyan; opacity: 0.5'] * len(row)  # cyan for matches meeting all conditions
                     return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                 else:
                     return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
@@ -203,7 +203,7 @@ def highlight_matches(row):
                 ):
                     # Calculate total shots for both teams in second half
                     if total_shots <= 22 and total_shots > 0:
-                        return ['color: #E6E6FA; opacity: 0.5'] * len(row)  # light purple for matches meeting all conditions
+                        return ['color: cyan; opacity: 0.5'] * len(row)  # cyan for matches meeting all conditions
                     return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                 else:
                     return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
