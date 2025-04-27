@@ -175,6 +175,11 @@ def highlight_matches(row):
                         0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
                     row.scores.split(',')[0]) <= 720
                 ):
+                    # Calculate total shots for both teams in first half
+                    team1_shots_total = sum(int(x) for x in str(row.team1_shots).split('+'))
+                    team2_shots_total = sum(int(x) for x in str(row.team2_shots).split('+'))
+                    if team1_shots_total + team2_shots_total <= 11:
+                        return ['color: purple; opacity: 0.5'] * len(row)  # purple for matches meeting all conditions
                     return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                 else:
                     return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
@@ -191,6 +196,11 @@ def highlight_matches(row):
                         0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
                     row.scores.split(',')[0]) <= 600
                 ):
+                    # Calculate total shots for both teams in first half
+                    team1_shots_total = sum(int(x) for x in str(row.team1_shots).split('+'))
+                    team2_shots_total = sum(int(x) for x in str(row.team2_shots).split('+'))
+                    if team1_shots_total + team2_shots_total <= 22:
+                        return ['color: purple; opacity: 0.5'] * len(row)  # purple for matches meeting all conditions
                     return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                 else:
                     return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
