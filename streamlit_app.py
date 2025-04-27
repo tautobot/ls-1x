@@ -167,7 +167,7 @@ def highlight_matches(row):
                     ) or (
                     float(row.prediction) <= 3 and
                     row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
-            )
+                )
             ):
                 if (
                         ':' in str(row.scores) and
@@ -176,10 +176,15 @@ def highlight_matches(row):
                     row.scores.split(',')[0]) <= 720
                 ):
                     # Calculate total shots for both teams in first half
-                    team1_shots_total = sum(int(x) for x in str(row.team1_shots).split('+'))
-                    team2_shots_total = sum(int(x) for x in str(row.team2_shots).split('+'))
-                    if team1_shots_total + team2_shots_total <= 11:
-                        return ['color: purple; opacity: 0.5'] * len(row)  # purple for matches meeting all conditions
+                    try:
+                        team1_shots = str(row.team1_shots) if pd.notna(row.team1_shots) else '0'
+                        team2_shots = str(row.team2_shots) if pd.notna(row.team2_shots) else '0'
+                        team1_shots_total = sum(int(x.strip()) for x in team1_shots.split('+') if x.strip().isdigit())
+                        team2_shots_total = sum(int(x.strip()) for x in team2_shots.split('+') if x.strip().isdigit())
+                        if team1_shots_total + team2_shots_total <= 11:
+                            return ['color: purple; opacity: 0.5'] * len(row)  # purple for matches meeting all conditions
+                    except (ValueError, AttributeError):
+                        pass  # If there's any error in processing shots, fall back to orange
                     return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                 else:
                     return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
@@ -196,11 +201,16 @@ def highlight_matches(row):
                         0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
                     row.scores.split(',')[0]) <= 600
                 ):
-                    # Calculate total shots for both teams in first half
-                    team1_shots_total = sum(int(x) for x in str(row.team1_shots).split('+'))
-                    team2_shots_total = sum(int(x) for x in str(row.team2_shots).split('+'))
-                    if team1_shots_total + team2_shots_total <= 22:
-                        return ['color: purple; opacity: 0.5'] * len(row)  # purple for matches meeting all conditions
+                    # Calculate total shots for both teams in second half
+                    try:
+                        team1_shots = str(row.team1_shots) if pd.notna(row.team1_shots) else '0'
+                        team2_shots = str(row.team2_shots) if pd.notna(row.team2_shots) else '0'
+                        team1_shots_total = sum(int(x.strip()) for x in team1_shots.split('+') if x.strip().isdigit())
+                        team2_shots_total = sum(int(x.strip()) for x in team2_shots.split('+') if x.strip().isdigit())
+                        if team1_shots_total + team2_shots_total <= 22:
+                            return ['color: purple; opacity: 0.5'] * len(row)  # purple for matches meeting all conditions
+                    except (ValueError, AttributeError):
+                        pass  # If there's any error in processing shots, fall back to orange
                     return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                 else:
                     return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
