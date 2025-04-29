@@ -81,62 +81,62 @@ def page_load():
         clear()
 
     column_config = {
-        "league"        : st.column_config.Column(
+        "league": st.column_config.Column(
             label="League",
             width="small"
         ),
-        "team1"         : st.column_config.Column(
+        "team1": st.column_config.Column(
             label="T1",
             width="small"
         ),
-        "team2"         : st.column_config.Column(
+        "team2": st.column_config.Column(
             label="T2",
             width="small"
         ),
-        "half"          : st.column_config.Column(
+        "half": st.column_config.Column(
             label="Half",
-            width="small"
+            width=40
         ),
-        "h1_score"      : st.column_config.TextColumn(
+        "h1_score": st.column_config.TextColumn(
             label="H1 Score",
-            width="small"
+            width=50
         ),
-        "score"         : st.column_config.TextColumn(
+        "score": st.column_config.TextColumn(
             label="Score",
-            width="small"
+            width=50
         ),
-        "time_match"    : st.column_config.Column(
+        "time_match": st.column_config.Column(
             label="Time",
-            width="small"
+            width=70
         ),
-        "prediction"    : st.column_config.NumberColumn(
+        "prediction": st.column_config.NumberColumn(
             label="Pre",
             format="%.1f",
-            width="small"
+            width=50
         ),
-        "h2_prediction" : st.column_config.NumberColumn(
+        "h2_prediction": st.column_config.NumberColumn(
             label="H2 Pre",
             format="%.1f",
-            width="small"
+            width=50
         ),
         "cur_prediction": st.column_config.NumberColumn(
             label="Cur Pre",
             format="%.1f",
-            width="small"
+            width=50
         ),
         "team1_shots": st.column_config.TextColumn(
             label="T1 Shots",
-            width="small"
+            width=60
         ),
         "team2_shots": st.column_config.TextColumn(
             label="T2 Shots",
-            width="small"
+            width=60
         ),
-        "scores"        : st.column_config.TextColumn(
+        "scores": st.column_config.TextColumn(
             label="Scored",
-            width="medium"
+            width=150
         ),
-        "url"           : st.column_config.LinkColumn(
+        "url": st.column_config.LinkColumn(
             label="Link",
             display_text=f"Link",
             width="small"
