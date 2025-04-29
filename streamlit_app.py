@@ -24,10 +24,6 @@ page_num = 1
 page_size = 50
 data = []
 
-# Display the initial DataFrame table
-dataframe = st.dataframe()
-
-
 # Begin streamlit UI Region
 def page_load():
     global filters
@@ -276,7 +272,11 @@ def load_data():
 
 
 def main():
+    # Initialize UI components first
     page_load()
+    
+    # Initialize the dataframe after UI components
+    dataframe = st.dataframe()
     
     # Update the DataFrame table every 15 seconds with new data
     while True:
