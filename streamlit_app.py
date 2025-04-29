@@ -152,7 +152,13 @@ def page_load():
 # End Region
 
 
-page_load()
+# Initialize global variables
+page_num = 1
+page_size = 50
+data = []
+
+# Display the initial DataFrame table
+dataframe = st.dataframe()
 
 
 def highlight_matches(row):
@@ -270,66 +276,22 @@ def load_data():
     return None
 
 
-# Display the initial DataFrame table
-dataframe = st.dataframe()
+def main():
+    page_load()
+    
+    # Update the DataFrame table every 15 seconds with new data
+    while True:
+        df = load_data()
+        if df is not None:
+            dataframe.dataframe(
+                df.style.apply(highlight_matches, axis=1),
+                use_container_width=True,
+                hide_index=False,
+                height=(len(df) + 1) * 35 + 3,
+                column_config=column_config,
+                key='live_matches'
+            )
+        time.sleep(15)
 
-
-# Update the DataFrame table every 10 seconds with new data
-while True:
-    df = load_data()
-
-    dataframe.dataframe(
-        df.style.apply(highlight_matches, axis=1),
-        use_container_width=True,
-        hide_index=False,
-        height=(len(df) + 1) * 35 + 3,
-        column_config=column_config,
-        key='live_matches'
-    )
-
-    time.sleep(15)
-
-    # select, compare = st.tabs(["Matches", "Selected Matches"])
-    # json_data = []
-    # with select:
-    #     event = st.dataframe(
-    #         # df.iloc[start_idx:end_idx].style.apply(highlight_matches, axis=1),
-    #         df.style.apply(highlight_matches, axis=1),
-    #         use_container_width=True,
-    #         hide_index=True,
-    #         on_select="rerun",
-    #         selection_mode="multi-row",
-    #         height=(len(df) + 1) * 35 + 3,
-    #         column_config=column_config
-    #     )
-    #
-    #     # st.header("Selected matches")
-    #     matches = event.selection.rows
-    #     filtered_df = df.iloc[matches]
-    #     filtered_data = filtered_df.to_json(orient='records')
-    #     selected_data = json.loads(filtered_data)
-    #     if selected_data:
-    #         for d in selected_data:
-    #             print(f"d:{d}")
-    #             json_data.append(d)
-    #         utils.insert_data_into_json_w_path(json_data, f'{TEMP_FOLDER}/test.json')
-    #
-    # with compare:
-    #     def onClick():
-    #         st.session_state["clicked"] = True
-    #
-    #     existing_data = utils.read_json_w_file_path(f'{TEMP_FOLDER}/test.json')
-    #     selected_df = covert_json_to_dataframe(existing_data)
-    #     st.dataframe(
-    #         selected_df.style.apply(highlight_matches, axis=1),
-    #         key=time.time(),
-    #         use_container_width=True,
-    #         height=(len(existing_data) + 1) * 35 + 3,
-    #         column_config=column_config
-    #     )
-    #     if "clicked" not in st.session_state:
-    #         st.session_state["clicked"] = False
-    #     st.button("Clear", on_click=onClick, key=time.time())
-    #     if st.session_state["clicked"]:
-    #         st.success("Done!")
-    #         utils.write_json_w_path([], f'{TEMP_FOLDER}/test.json')
+if __name__ == "__main__":
+    main()
