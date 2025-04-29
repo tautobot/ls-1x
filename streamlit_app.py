@@ -9,19 +9,27 @@ from operator import itemgetter
 from horus.json_server import JsonServerProcessor
 from horus.enums import MatchStatus
 
+# Set page config as the first Streamlit command
+st.set_page_config(
+    page_title="Livescore App",
+    page_icon=":soccer:",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
+# Initialize global variables
 filters = None
 column_config = None
+page_num = 1
+page_size = 50
+data = []
+
+# Display the initial DataFrame table
+dataframe = st.dataframe()
 
 
 # Begin streamlit UI Region
 def page_load():
-    st.set_page_config(
-        page_title="Livescore App",
-        page_icon=":soccer:",
-        layout="wide",
-        initial_sidebar_state="collapsed"
-    )
     global filters
     global page_num
     global page_size
@@ -150,15 +158,6 @@ def page_load():
 
     }
 # End Region
-
-
-# Initialize global variables
-page_num = 1
-page_size = 50
-data = []
-
-# Display the initial DataFrame table
-dataframe = st.dataframe()
 
 
 def highlight_matches(row):
