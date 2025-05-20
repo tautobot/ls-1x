@@ -81,6 +81,16 @@ def page_load():
         clear()
 
     column_config = {
+        "selected": st.column_config.CheckboxColumn(
+            "Select",
+            help="Select to track this match",
+            width="small",
+            default=False
+        ),
+        "id": st.column_config.Column(
+            label="ID",
+            width="small"
+        ),
         "league": st.column_config.Column(
             label="League",
             width="small"
@@ -222,7 +232,7 @@ def paginate_dataframe(dataframe, page_size, page_num):
 
 
 def covert_json_to_dataframe(j_data):
-    return pd.DataFrame(
+    df = pd.DataFrame(
         data=j_data,
         columns=(
             "id",
@@ -247,6 +257,13 @@ def covert_json_to_dataframe(j_data):
             "freeze_time",
         )
     )
+    # Add selected column with default False
+    df['selected'] = False
+    # Reorder columns to put selected first
+    cols = df.columns.tolist()
+    cols = ['selected'] + [col for col in cols if col != 'selected']
+    df = df[cols]
+    return df
 
 
 # Function to simulate loading new data into the DataFrame
@@ -271,26 +288,90 @@ def load_data():
     return None
 
 
+def handle_selection():
+    """Handle checkbox selection changes"""
+    try:
+        # Get the edited data from session state
+        edited_data = st.session_state.live_matches
+        original_df = st.session_state.df_data
+        
+        # Get edited rows from the data structure
+        edited_rows = edited_data.get('edited_rows', {})
+        
+        # Find selected rows
+        selected_indices = []
+        for idx, changes in edited_rows.items():
+            if changes.get('selected', False):
+                selected_indices.append(int(idx))
+        
+        # Update selected matches
+        if selected_indices:
+            # Get the selected rows from the original dataframe
+            selected_rows = original_df.iloc[selected_indices].copy()
+            # Remove the selected column if it exists
+            if 'selected' in selected_rows.columns:
+                selected_rows = selected_rows.drop(columns=['selected'])
+            st.session_state.selected_matches = selected_rows
+        else:
+            st.session_state.selected_matches = pd.DataFrame()
+            
+    except Exception as e:
+        st.error(f"Error updating selections: {str(e)}")
+
+
 def main():
     # Initialize UI components first
     page_load()
     
-    # Initialize the dataframe after UI components
-    dataframe = st.dataframe()
+    # Initialize selected matches if not exists
+    if 'selected_matches' not in st.session_state:
+        st.session_state.selected_matches = pd.DataFrame()
     
-    # Update the DataFrame table every 15 seconds with new data
-    while True:
-        df = load_data()
-        if df is not None:
-            dataframe.dataframe(
-                df.style.apply(highlight_matches, axis=1),
+    # Load data
+    df = load_data()
+    if df is not None:
+        # Store the dataframe in session state
+        st.session_state.df_data = df
+        
+        # Add selected column if not exists
+        if 'selected' not in df.columns:
+            df['selected'] = False
+        
+        # Configure the checkbox column
+        column_config['selected'] = st.column_config.CheckboxColumn(
+            'Select',
+            help='Select this match',
+            default=False
+        )
+        
+        # Show Selected Matches first
+        st.markdown("### Selected Matches")
+        if not st.session_state.selected_matches.empty:
+            st.dataframe(
+                st.session_state.selected_matches,
                 use_container_width=True,
-                hide_index=False,
-                height=(len(df) + 1) * 35 + 3,
-                column_config=column_config,
-                key='live_matches'
+                hide_index=True,
+                height=(len(st.session_state.selected_matches) + 1) * 35 + 3,
+                column_config={k: v for k, v in column_config.items() if k != 'selected'},
+                key='selected_matches_display'
             )
-        time.sleep(15)
+        else:
+            st.info("No matches selected. Use checkboxes below to select matches.")
+        
+        # Show All Matches second
+        st.markdown("### All Matches")
+        st.data_editor(
+            df,
+            use_container_width=True,
+            hide_index=True,
+            height=(len(df) + 1) * 35 + 3,
+            column_config=column_config,
+            key='live_matches',
+            num_rows="dynamic",
+            on_change=handle_selection
+        )
 
 if __name__ == "__main__":
     main()
+    time.sleep(15)
+    st.rerun()
