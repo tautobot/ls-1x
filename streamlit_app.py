@@ -142,7 +142,7 @@ def page_load():
             label="T2 Shots",
             width=60
         ),
-        "scores": st.column_config.TextColumn(
+        "scores": st.column_config.Column(
             label="Scored",
             width=150
         ),
@@ -164,68 +164,6 @@ def page_load():
 
     }
 # End Region
-
-
-def highlight_matches(row):
-    team1_shots = str(row.team1_shots) if pd.notna(row.team1_shots) else '0'
-    team2_shots = str(row.team2_shots) if pd.notna(row.team2_shots) else '0'
-
-    team1_shots_total = sum(int(x.strip()) for x in team1_shots.split('+') if x.strip().isdigit())
-    team2_shots_total = sum(int(x.strip()) for x in team2_shots.split('+') if x.strip().isdigit())
-    total_shots = team1_shots_total + team2_shots_total
-
-    if row.half == '1':
-        # Check for red color condition in first half
-        if total_shots >= 11:
-            return ['color: red; opacity: 0.5'] * len(row)
-    elif row.half == '2':
-        # Check for red color condition in second half
-        if total_shots >= 22:
-            return ['color: red; opacity: 0.5'] * len(row)
-    
-    if row.prediction:
-        if float(row.cur_prediction) > 3.5 or row.half not in ('1', '2'):
-            return ['color: '] * len(row)  # white
-
-        if row.half == '1':
-            if (
-                    (
-                            float(row.prediction) <= 2.5 and
-                            row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
-                    ) or (
-                    float(row.prediction) <= 3 and
-                    row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
-                )
-            ):
-                if (
-                        ':' in str(row.scores) and
-                        ':' in str(row.time_match) and
-                        0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
-                    row.scores.split(',')[0]) <= 720
-                ):
-                    return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
-                else:
-                    return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
-            else:
-                return ['color: '] * len(row)  # white
-        elif row.half == '2':
-            if (
-                float(row.prediction) <= 3 and
-                row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
-            ):
-                if (
-                        ':' in str(row.scores) and
-                        ':' in str(row.time_match) and
-                        0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
-                    row.scores.split(',')[0]) <= 600
-                ):
-                    return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
-                else:
-                    return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
-            else:
-                return ['color: '] * len(row)  # white
-    return ['color: '] * len(row)  # white
-
 
 def paginate_dataframe(dataframe, page_size, page_num):
     page_size = page_size
@@ -365,15 +303,78 @@ def main():
         
         # Show All Matches second
         st.markdown("### All Matches")
+        
+        def highlight_rows(row):
+            if pd.isna(row.team1_shots) and pd.isna(row.team2_shots):
+                return ['color: red; opacity: 0.5'] * len(row)
+
+            team1_shots = str(row.team1_shots) if pd.notna(row.team1_shots) else '0'
+            team2_shots = str(row.team2_shots) if pd.notna(row.team2_shots) else '0'
+
+            team1_shots_total = sum(int(x.strip()) for x in team1_shots.split('+') if x.strip().isdigit())
+            team2_shots_total = sum(int(x.strip()) for x in team2_shots.split('+') if x.strip().isdigit())
+            total_shots = team1_shots_total + team2_shots_total
+
+            if row.half == '1':
+                # Check for red color condition in first half
+                if total_shots >= 11:
+                    return ['color: red; opacity: 0.5'] * len(row)
+            else:
+                # Check for red color condition in second half
+                if total_shots >= 22:
+                    return ['color: red; opacity: 0.5'] * len(row)
+    
+            if row.prediction:
+                if float(row.cur_prediction) > 3.5 or row.half not in ('1', '2'):
+                    return ['color: '] * len(row)  # white
+
+                if row.half == '1':
+                    if (
+                            (
+                                    float(row.prediction) <= 2.5 and
+                                row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
+                        ) or (
+                        float(row.prediction) <= 3 and
+                        row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
+                    )
+                ):
+                     if (
+                            ':' in str(row.scores) and
+                            ':' in str(row.time_match) and
+                            0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
+                        row.scores.split(',')[0]) <= 720
+                    ):
+                        return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
+                    else:
+                        return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
+                elif row.half == '2':
+                    if (
+                        float(row.prediction) <= 3 and
+                        row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
+                    ):
+                        if (
+                                ':' in str(row.scores) and
+                                ':' in str(row.time_match) and
+                                0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
+                            row.scores.split(',')[0]) <= 600
+                        ):
+                            return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
+                        else:
+                            return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
+            return ['color: '] * len(row)  # white
+        # Configure which columns are editable
+        disabled_columns = [col for col in df.columns if col != 'selected']
+        
         st.data_editor(
-            df,
+            df.style.apply(highlight_rows, axis=1),
             use_container_width=True,
             hide_index=True,
             height=(len(df) + 1) * 35 + 3,
             column_config=column_config,
             key='live_matches',
             num_rows="dynamic",
-            on_change=handle_selection
+            on_change=handle_selection,
+            disabled=disabled_columns
         )
 
 if __name__ == "__main__":
