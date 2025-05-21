@@ -148,17 +148,17 @@ def page_load():
         ),
         "url": st.column_config.LinkColumn(
             label="Link",
-            display_text=f"Link",
+            display_text="Link",
             width="small"
         ),
         "h1_url": st.column_config.LinkColumn(
             label="H1 Link",
-            display_text=f"H1 Link",
+            display_text="H1 Link",
             width="small"
         ),
         "quick_events_url": st.column_config.LinkColumn(
             label="QE Link",
-            display_text=f"QE Link",
+            display_text="QE Link",
             width="small"
         )
 
@@ -241,17 +241,28 @@ def handle_selection():
         # Get edited rows from the data structure
         edited_rows = edited_data.get('edited_rows', {})
         
-        # Find selected rows
-        selected_indices = []
+        # Initialize selected_ids if not exists
+        if 'selected_ids' not in st.session_state:
+            st.session_state.selected_ids = set()
+        
+        # Update selected_ids based on changes
         for idx, changes in edited_rows.items():
+            row_idx = int(idx)
+            match_id = original_df.iloc[row_idx]['id']
             if changes.get('selected', False):
-                selected_indices.append(int(idx))
+                st.session_state.selected_ids.add(match_id)
+            else:
+                st.session_state.selected_ids.discard(match_id)
+        
+        # Update selected column in the main DataFrame
+        original_df.loc[:, 'selected'] = False  # Reset all to False
+        original_df.loc[original_df['id'].isin(st.session_state.selected_ids), 'selected'] = True
+        st.session_state.df_data = original_df  # Update the DataFrame in session state
         
         # Update selected matches
-        if selected_indices:
-            # Get the selected rows from the original dataframe
-            selected_rows = original_df.iloc[selected_indices].copy()
-            # Remove the selected column if it exists
+        if st.session_state.selected_ids:
+            # Get all rows where id is in selected_ids
+            selected_rows = original_df[original_df['id'].isin(st.session_state.selected_ids)].copy()
             if 'selected' in selected_rows.columns:
                 selected_rows = selected_rows.drop(columns=['selected'])
             st.session_state.selected_matches = selected_rows
@@ -289,17 +300,28 @@ def main():
         
         # Show Selected Matches first
         st.markdown("### Selected Matches")
+        # Calculate height for 5 rows (including header)
+        fixed_height = 6 * 35 + 3  # 5 data rows + 1 header row
         if not st.session_state.selected_matches.empty:
             st.dataframe(
                 st.session_state.selected_matches,
                 use_container_width=True,
                 hide_index=True,
-                height=(len(st.session_state.selected_matches) + 1) * 35 + 3,
+                height=fixed_height,
                 column_config={k: v for k, v in column_config.items() if k != 'selected'},
                 key='selected_matches_display'
             )
         else:
-            st.info("No matches selected. Use checkboxes below to select matches.")
+            # Create an empty DataFrame with the same columns
+            empty_df = pd.DataFrame(columns=[col for col in column_config.keys() if col != 'selected'])
+            st.dataframe(
+                empty_df,
+                use_container_width=True,
+                hide_index=True,
+                height=fixed_height,
+                column_config={k: v for k, v in column_config.items() if k != 'selected'},
+                key='selected_matches_display'
+            )
         
         # Show All Matches second
         st.markdown("### All Matches")
@@ -369,7 +391,6 @@ def main():
             df.style.apply(highlight_rows, axis=1),
             use_container_width=True,
             hide_index=True,
-            height=(len(df) + 1) * 35 + 3,
             column_config=column_config,
             key='live_matches',
             num_rows="dynamic",
