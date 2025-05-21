@@ -396,13 +396,16 @@ def main():
         # Configure which columns are editable
         disabled_columns = [col for col in df.columns if col != 'selected']
         
+        # Calculate height to fit all rows plus header
+        all_rows_height = (len(df) + 1) * 35 + 3
         st.data_editor(
             df.style.apply(highlight_rows, axis=1),
             use_container_width=True,
             hide_index=True,
+            height=all_rows_height,
             column_config=column_config,
             key='live_matches',
-            num_rows="dynamic",
+            num_rows="fixed",  # Change to fixed to prevent adding rows
             on_change=handle_selection,
             disabled=disabled_columns
         )
