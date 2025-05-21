@@ -323,6 +323,15 @@ def main():
                 key='selected_matches_display'
             )
         
+        # Add Clear button
+        if st.button('Clear Selected Matches'):
+            # Clear selected matches
+            st.session_state.selected_matches = pd.DataFrame()
+            st.session_state.selected_ids = set()
+            # Update selected column in main DataFrame
+            st.session_state.df_data.loc[:, 'selected'] = False
+            st.rerun()
+        
         # Show All Matches second
         st.markdown("### All Matches")
         
