@@ -167,15 +167,25 @@ def page_load():
 
 
 def highlight_matches(row):
+    team1_shots = str(row.team1_shots) if pd.notna(row.team1_shots) else '0'
+    team2_shots = str(row.team2_shots) if pd.notna(row.team2_shots) else '0'
+
+    team1_shots_total = sum(int(x.strip()) for x in team1_shots.split('+') if x.strip().isdigit())
+    team2_shots_total = sum(int(x.strip()) for x in team2_shots.split('+') if x.strip().isdigit())
+    total_shots = team1_shots_total + team2_shots_total
+
+    if row.half == '1':
+        # Check for red color condition in first half
+        if total_shots >= 11:
+            return ['color: red; opacity: 0.5'] * len(row)
+    elif row.half == '2':
+        # Check for red color condition in second half
+        if total_shots >= 22:
+            return ['color: red; opacity: 0.5'] * len(row)
+    
     if row.prediction:
         if float(row.cur_prediction) > 3.5 or row.half not in ('1', '2'):
             return ['color: '] * len(row)  # white
-
-        team1_shots = str(row.team1_shots) if pd.notna(row.team1_shots) else '0'
-        team2_shots = str(row.team2_shots) if pd.notna(row.team2_shots) else '0'
-        team1_shots_total = sum(int(x.strip()) for x in team1_shots.split('+') if x.strip().isdigit())
-        team2_shots_total = sum(int(x.strip()) for x in team2_shots.split('+') if x.strip().isdigit())
-        total_shots = team1_shots_total + team2_shots_total
 
         if row.half == '1':
             if (
@@ -193,9 +203,6 @@ def highlight_matches(row):
                         0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
                     row.scores.split(',')[0]) <= 720
                 ):
-                    # Calculate total shots for both teams in first half
-                    if total_shots <= 11 and total_shots > 0:
-                        return ['color: cyan; opacity: 0.5'] * len(row)  # cyan for matches meeting all conditions
                     return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                 else:
                     return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
@@ -203,8 +210,8 @@ def highlight_matches(row):
                 return ['color: '] * len(row)  # white
         elif row.half == '2':
             if (
-                    float(row.prediction) <= 3 and
-                    row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
+                float(row.prediction) <= 3 and
+                row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
             ):
                 if (
                         ':' in str(row.scores) and
@@ -212,14 +219,12 @@ def highlight_matches(row):
                         0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
                     row.scores.split(',')[0]) <= 600
                 ):
-                    # Calculate total shots for both teams in second half
-                    if total_shots <= 22 and total_shots > 0:
-                        return ['color: cyan; opacity: 0.5'] * len(row)  # cyan for matches meeting all conditions
                     return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                 else:
                     return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
             else:
                 return ['color: '] * len(row)  # white
+    return ['color: '] * len(row)  # white
 
 
 def paginate_dataframe(dataframe, page_size, page_num):
