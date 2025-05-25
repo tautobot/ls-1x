@@ -335,29 +335,29 @@ def main():
         )
         
         # Show Selected Matches first
-        st.markdown("### Selected Matches")
-        # Calculate height for 5 rows (including header)
-        fixed_height = 6 * 35 + 3  # 5 data rows + 1 header row
-        if not st.session_state.selected_matches.empty:
-            st.dataframe(
-                st.session_state.selected_matches,
+        with st.expander("Selected Matches", expanded=False):
+            # Calculate height for 5 rows (including header)
+            fixed_height = 6 * 35 + 3  # 5 data rows + 1 header row
+            if not st.session_state.selected_matches.empty:
+                st.dataframe(
+                    st.session_state.selected_matches,
                 use_container_width=True,
                 hide_index=True,
                 height=fixed_height,
                 column_config={k: v for k, v in column_config.items() if k != 'selected'},
                 key='selected_matches_display'
             )
-        else:
-            # Create an empty DataFrame with the same columns
-            empty_df = pd.DataFrame(columns=[col for col in column_config.keys() if col != 'selected'])
-            st.dataframe(
-                empty_df,
-                use_container_width=True,
-                hide_index=True,
-                height=fixed_height,
-                column_config={k: v for k, v in column_config.items() if k != 'selected'},
-                key='selected_matches_display'
-            )
+            else:
+                # Create an empty DataFrame with the same columns
+                empty_df = pd.DataFrame(columns=[col for col in column_config.keys() if col != 'selected'])
+                st.dataframe(
+                    empty_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    height=fixed_height,
+                    column_config={k: v for k, v in column_config.items() if k != 'selected'},
+                    key='selected_matches_display'
+                )
         
         # Add Clear button
         if st.button('Clear Selected Matches'):
