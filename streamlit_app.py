@@ -134,13 +134,43 @@ def page_load():
             format="%.1f",
             width=50
         ),
+        "team1_possession": st.column_config.ProgressColumn(
+            label="T1 Possession",
+            min_value=0,
+            max_value=100,
+            format="%d%%",
+            width=80
+        ),
+        "team2_possession": st.column_config.ProgressColumn(
+            label="T2 Possession",
+            min_value=0,
+            max_value=100,
+            format="%d%%",
+            width=80
+        ),
         "team1_shots": st.column_config.TextColumn(
             label="T1 Shots",
-            width=60
+            width=50
         ),
         "team2_shots": st.column_config.TextColumn(
             label="T2 Shots",
-            width=60
+            width=50
+        ),
+        "team1_attacks": st.column_config.NumberColumn(
+            label="T1 Attacks",
+            width=50
+        ),
+        "team1_d_attacks": st.column_config.NumberColumn(
+            label="T1 DAttacks",
+            width=50
+        ),
+        "team2_attacks": st.column_config.NumberColumn(
+            label="T2 Attacks",
+            width=50
+        ),
+        "team2_d_attacks": st.column_config.NumberColumn(
+            label="T2 DAttacks",
+            width=50
         ),
         "scores": st.column_config.Column(
             label="Scored",
@@ -189,8 +219,14 @@ def covert_json_to_dataframe(j_data):
             "prediction",
             "h2_prediction",
             "cur_prediction",
+            "team1_possession",
+            "team2_possession",
             "team1_shots",
             "team2_shots",
+            "team1_attacks",
+            "team1_d_attacks",
+            "team2_attacks",
+            "team2_d_attacks",
             "scores",
             "status",
             "url",
@@ -362,31 +398,32 @@ def main():
                 if row.half == '1':
                     if (
                             (
-                                    float(row.prediction) <= 2.5 and
+                                float(row.prediction) <= 2.5 and
                                 row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
-                        ) or (
-                        float(row.prediction) <= 3 and
-                        row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
-                    )
-                ):
-                     if (
+                            ) or 
+                            (
+                                float(row.prediction) <= 3 and
+                                row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
+                            )
+                        ):
+                        if (
                             ':' in str(row.scores) and
                             ':' in str(row.time_match) and
                             0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
                         row.scores.split(',')[0]) <= 720
-                    ):
-                        return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
-                    else:
-                        return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
+                        ):
+                            return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
+                        else:
+                            return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
                 elif row.half == '2':
                     if (
                         float(row.prediction) <= 3 and
                         row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
                     ):
                         if (
-                                ':' in str(row.scores) and
-                                ':' in str(row.time_match) and
-                                0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
+                            ':' in str(row.scores) and
+                            ':' in str(row.time_match) and
+                            0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
                             row.scores.split(',')[0]) <= 600
                         ):
                             return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange

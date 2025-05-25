@@ -28,3 +28,87 @@ then install dependencies
 poetry shell
 python -m streamlit run streamlit_app.py
 ```
+
+Configure Streamlit to Run on Public IP
+```
+mkdir -p ~/.streamlit
+nano ~/.streamlit/config.toml
+```
+
+Add the following to the config.toml file:
+```
+[server]
+headless = true
+enableCORS = false
+port = 8501
+enableXsrfProtection = false
+address = "0.0.0.0"
+```
+
+Allow Port 8501 Through Firewall
+```
+sudo ufw allow 8501
+```
+
+Run Streamlit app headless
+```
+nohup streamlit run app.py > app.log 2>&1 &
+```
+
+Here’s How to Fix It on GCP
+
+🔧 Step-by-Step: Open Port 8501 on GCP
+	1.	Go to your Google Cloud Console
+https://console.cloud.google.com/
+	2.	Navigate to:
+VPC network → Firewall rules
+	3.	Click “Create Firewall Rule”
+	4.	Fill in the form:
+Name: streamlit
+Target tags: streamlit
+Source filter: IP ranges
+Source IP ranges: 0.0.0.0/0
+Protocol and ports: tcp:8501
+
+
+# NGINX
+Optional: Setup with Domain + HTTPS (via Nginx + Let’s Encrypt)
+Install Nginx
+```
+sudo apt install nginx -y
+```
+
+Set Up Reverse Proxy for Streamlit
+Create a config file:
+```
+sudo nano /etc/nginx/sites-available/streamlit
+```
+
+Example config:
+```
+server {
+    listen 80;
+    server_name your_domain.com;
+
+    location / {
+        proxy_pass http://localhost:8501;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Enable the config file and restart nginx:
+```
+sudo ln -s /etc/nginx/sites-available/streamlit /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+Set Up HTTPS (Let’s Encrypt)
+```
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d your_domain.com
+```
