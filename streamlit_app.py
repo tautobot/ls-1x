@@ -248,6 +248,9 @@ def covert_json_to_dataframe(j_data):
 # Function to simulate loading new data into the DataFrame
 def load_data():
     try:
+        # Get the current selected_ids before loading new data
+        selected_ids = st.session_state.get('selected_ids', set())
+        
         JsonServer = JsonServerProcessor(source='1x', params={'skip_convert_data_types': True})
         if filters is not None:
             res = JsonServer.get_all_matches(filters)
@@ -259,6 +262,27 @@ def load_data():
 
             df = covert_json_to_dataframe(data)
             df = paginate_dataframe(df, page_size, page_num)
+            
+            # Get the set of current IDs in the loaded data
+            current_ids = set(df['id'].unique())
+            
+            # Find any selected IDs that are no longer in the current data
+            removed_ids = selected_ids - current_ids
+            
+            # Update selected_ids to only keep those that exist in the current data
+            if removed_ids:
+                st.session_state.selected_ids = selected_ids - removed_ids
+                # Also update selected_matches to remove the deleted rows
+                if 'selected_matches' in st.session_state and not st.session_state.selected_matches.empty:
+                    st.session_state.selected_matches = st.session_state.selected_matches[
+                        ~st.session_state.selected_matches['id'].isin(removed_ids)
+                    ]
+            
+            # Restore the selected state from session state
+            df['selected'] = False
+            if st.session_state.get('selected_ids'):
+                df.loc[df['id'].isin(st.session_state.selected_ids), 'selected'] = True
+                
             return df
     except requests.exceptions.RequestException as e:
         logger.error(f'RequestException: {e}')
@@ -334,43 +358,6 @@ def main():
             default=False
         )
         
-        # Show Selected Matches first
-        with st.expander("Selected Matches", expanded=False):
-            # Calculate height for 5 rows (including header)
-            fixed_height = 6 * 35 + 3  # 5 data rows + 1 header row
-            if not st.session_state.selected_matches.empty:
-                st.dataframe(
-                    st.session_state.selected_matches,
-                use_container_width=True,
-                hide_index=True,
-                height=fixed_height,
-                column_config={k: v for k, v in column_config.items() if k != 'selected'},
-                key='selected_matches_display'
-            )
-            else:
-                # Create an empty DataFrame with the same columns
-                empty_df = pd.DataFrame(columns=[col for col in column_config.keys() if col != 'selected'])
-                st.dataframe(
-                    empty_df,
-                    use_container_width=True,
-                    hide_index=True,
-                    height=fixed_height,
-                    column_config={k: v for k, v in column_config.items() if k != 'selected'},
-                    key='selected_matches_display'
-                )
-        
-        # Add Clear button
-        if st.button('Clear Selected Matches'):
-            # Clear selected matches
-            st.session_state.selected_matches = pd.DataFrame()
-            st.session_state.selected_ids = set()
-            # Update selected column in main DataFrame
-            st.session_state.df_data.loc[:, 'selected'] = False
-            st.rerun()
-        
-        # Show All Matches second
-        st.markdown("### All Matches")
-        
         def highlight_rows(row):
             if pd.isna(row.team1_shots) and pd.isna(row.team2_shots):
                 return ['color: red; opacity: 0.5'] * len(row)
@@ -430,6 +417,44 @@ def main():
                         else:
                             return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
             return ['color: '] * len(row)  # white
+        
+        # Show Selected Matches first
+        with st.expander("Selected Matches", expanded=False):
+            # Calculate height for 5 rows (including header)
+            fixed_height = 6 * 35 + 3  # 5 data rows + 1 header row
+            if not st.session_state.selected_matches.empty:
+                st.dataframe(
+                    st.session_state.selected_matches.style.apply(highlight_rows, axis=1),
+                    use_container_width=True,
+                    hide_index=True,
+                    height=fixed_height,
+                    column_config={k: v for k, v in column_config.items() if k != 'selected'},
+                    key='selected_matches_display'
+            )
+            else:
+                # Create an empty DataFrame with the same columns
+                empty_df = pd.DataFrame(columns=[col for col in column_config.keys() if col != 'selected'])
+                st.dataframe(
+                    empty_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    height=fixed_height,
+                    column_config={k: v for k, v in column_config.items() if k != 'selected'},
+                    key='selected_matches_display'
+                )
+        
+        # Add Clear button
+        if st.button('Clear Selected Matches'):
+            # Clear selected matches
+            st.session_state.selected_matches = pd.DataFrame()
+            st.session_state.selected_ids = set()
+            # Update selected column in main DataFrame
+            st.session_state.df_data.loc[:, 'selected'] = False
+            st.rerun()
+        
+        # Show All Matches second
+        st.markdown("### All Matches")
+        
         # Configure which columns are editable
         disabled_columns = [col for col in df.columns if col != 'selected']
         
