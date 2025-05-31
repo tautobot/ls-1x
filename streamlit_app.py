@@ -272,13 +272,22 @@ def load_data():
             # Update selected_ids to only keep those that exist in the current data
             if removed_ids:
                 st.session_state.selected_ids = selected_ids - removed_ids
-                # Also update selected_matches to remove the deleted rows
-                if 'selected_matches' in st.session_state and not st.session_state.selected_matches.empty:
-                    st.session_state.selected_matches = st.session_state.selected_matches[
-                        ~st.session_state.selected_matches['id'].isin(removed_ids)
-                    ]
             
-            # Restore the selected state from session state
+            # Update selected_matches with the latest data for the selected matches
+            if st.session_state.get('selected_ids'):
+                # Get the latest data for all selected matches
+                selected_matches = df[df['id'].isin(st.session_state.selected_ids)].copy()
+                if not selected_matches.empty:
+                    # Remove the 'selected' column if it exists to avoid confusion
+                    if 'selected' in selected_matches.columns:
+                        selected_matches = selected_matches.drop(columns=['selected'])
+                    st.session_state.selected_matches = selected_matches
+                else:
+                    st.session_state.selected_matches = pd.DataFrame()
+            else:
+                st.session_state.selected_matches = pd.DataFrame()
+            
+            # Restore the selected state in the main DataFrame
             df['selected'] = False
             if st.session_state.get('selected_ids'):
                 df.loc[df['id'].isin(st.session_state.selected_ids), 'selected'] = True
