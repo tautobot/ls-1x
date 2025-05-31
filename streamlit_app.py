@@ -427,8 +427,27 @@ def main():
                             return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
             return ['color: '] * len(row)  # white
         
-        # Show Selected Matches first
-        with st.expander("Selected Matches", expanded=False):
+        # Create a summary table above the expander
+        st.markdown("#### Matches")
+        # Create a copy of the dataframe without the 'selected' column for display
+        summary_df = df.drop(columns=['selected']) if 'selected' in df.columns else df.copy()
+        
+        # Display the summary table with a fixed height
+        st.dataframe(
+            summary_df.style.apply(highlight_rows, axis=1),
+            use_container_width=True,
+            height=21 * 35 + 3,  # 20 data rows + 1 header row
+            column_config={k: v for k, v in column_config.items() if k != 'selected'},
+            key='summary_table'
+        )
+        
+        # Add some space before the expander
+        st.markdown("---")
+        
+        # Create a single expander for both Selected and All Matches
+        with st.expander("Matches", expanded=False):
+            # Selected Matches section
+            st.markdown("##### Selected Matches")
             # Calculate height for 5 rows (including header)
             fixed_height = 6 * 35 + 3  # 5 data rows + 1 header row
             if not st.session_state.selected_matches.empty:
@@ -439,7 +458,7 @@ def main():
                     height=fixed_height,
                     column_config={k: v for k, v in column_config.items() if k != 'selected'},
                     key='selected_matches_display'
-            )
+                )
             else:
                 # Create an empty DataFrame with the same columns
                 empty_df = pd.DataFrame(columns=[col for col in column_config.keys() if col != 'selected'])
@@ -451,35 +470,39 @@ def main():
                     column_config={k: v for k, v in column_config.items() if k != 'selected'},
                     key='selected_matches_display'
                 )
-        
-        # Add Clear button
-        if st.button('Clear Selected Matches'):
-            # Clear selected matches
-            st.session_state.selected_matches = pd.DataFrame()
-            st.session_state.selected_ids = set()
-            # Update selected column in main DataFrame
-            st.session_state.df_data.loc[:, 'selected'] = False
-            st.rerun()
-        
-        # Show All Matches second
-        st.markdown("### All Matches")
-        
-        # Configure which columns are editable
-        disabled_columns = [col for col in df.columns if col != 'selected']
-        
-        # Calculate height to fit all rows plus header
-        all_rows_height = (len(df) + 1) * 35 + 3
-        st.data_editor(
-            df.style.apply(highlight_rows, axis=1),
-            use_container_width=True,
-            hide_index=True,
-            height=all_rows_height,
-            column_config=column_config,
-            key='live_matches',
-            num_rows="fixed",  # Change to fixed to prevent adding rows
-            on_change=handle_selection,
-            disabled=disabled_columns
-        )
+            
+            # Add Clear button below Selected Matches
+            if st.button('Clear Selected Matches'):
+                # Clear selected matches
+                st.session_state.selected_matches = pd.DataFrame()
+                st.session_state.selected_ids = set()
+                # Update selected column in main DataFrame
+                st.session_state.df_data.loc[:, 'selected'] = False
+                st.rerun()
+            
+            # Add a divider between sections
+            st.markdown("---")
+            
+            # All Matches section
+            st.markdown("##### All Matches")
+            
+            # Configure which columns are editable
+            disabled_columns = [col for col in df.columns if col != 'selected']
+            
+            # Calculate height to fit all rows plus header
+            all_rows_height = min((len(df) + 1) * 35 + 3, 500)  # Cap height at 500px
+            
+            st.data_editor(
+                df.style.apply(highlight_rows, axis=1),
+                use_container_width=True,
+                hide_index=True,
+                height=all_rows_height,
+                column_config=column_config,
+                key='live_matches',
+                num_rows="fixed",  # Prevent adding rows
+                on_change=handle_selection,
+                disabled=disabled_columns
+            )
 
 if __name__ == "__main__":
     main()
