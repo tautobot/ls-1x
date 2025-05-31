@@ -50,12 +50,17 @@ def page_load():
         elif option1 == "Potential Match":
             filters = "?risk=0"
 
+    pagination_cols = st.columns([1, 1, 2, 2, 2])
+    with pagination_cols[0]:
+        page_num = st.number_input("Page Number", min_value=1, value=1)
+    with pagination_cols[1]:
+        page_size = st.selectbox("Page Size", options=[10, 25, 50, 100], index=2)
 
-    # Initialize page_num and page_size as they'll be set below the table
-    if 'page_num' not in st.session_state:
-        st.session_state.page_num = 1
-    if 'page_size' not in st.session_state:
-        st.session_state.page_size = 50
+    # # Initialize page_num and page_size as they'll be set below the table
+    # if 'page_num' not in st.session_state:
+    #     st.session_state.page_num = 1
+    # if 'page_size' not in st.session_state:
+    #     st.session_state.page_size = 50
 
     # Create text input boxes for "TOK" and "UID" in the sidebar
     tok = st.sidebar.text_input("TOK", "")
@@ -448,21 +453,21 @@ def main():
             key='df_live_matches'
         )
         
-        # Add pagination controls below the main table
-        col1, col2 = st.columns(2)
-        with col1:
-            st.session_state.page_num = st.number_input("Page Number", min_value=1, value=st.session_state.page_num)
-        with col2:
-            st.session_state.page_size = st.selectbox("Page Size", options=[10, 25, 50, 100], 
-                                                    index=[10, 25, 50, 100].index(st.session_state.page_size) 
-                                                    if st.session_state.page_size in [10, 25, 50, 100] else 2)
+        # # Add pagination controls below the main table
+        # col1, col2 = st.columns(2)
+        # with col1:
+        #     st.session_state.page_num = st.number_input("Page Number", min_value=1, value=st.session_state.page_num)
+        # with col2:
+        #     st.session_state.page_size = st.selectbox("Page Size", options=[10, 25, 50, 100], 
+        #                                             index=[10, 25, 50, 100].index(st.session_state.page_size) 
+        #                                             if st.session_state.page_size in [10, 25, 50, 100] else 2)
         
         # Add some space before the expander
         st.markdown("---")
         
-        # Update the page_num and page_size variables
-        page_num = st.session_state.page_num
-        page_size = st.session_state.page_size
+        # # Update the page_num and page_size variables
+        # page_num = st.session_state.page_num
+        # page_size = st.session_state.page_size
         
         # Create a single expander for both Selected and All Matches
         with st.expander("Matches", expanded=False):
