@@ -32,7 +32,7 @@ def page_load():
     global column_config
     global data
 
-    col1, col2, _ = st.columns(3)
+    col1, col2, _, _ = st.columns([2, 1, 1, 1])
     with col1:
         option2 = st.radio(
             "Filters:",
@@ -448,7 +448,7 @@ def main():
         st.dataframe(
             summary_df.style.apply(highlight_rows, axis=1),
             use_container_width=True,
-            height=21 * 35 + 3,  # 20 data rows + 1 header row
+            height=(len(df) + 1) * 35 + 3,
             column_config={k: v for k, v in column_config.items() if k != 'selected'},
             key='df_live_matches'
         )
