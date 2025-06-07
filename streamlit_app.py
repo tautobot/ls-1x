@@ -500,7 +500,7 @@ def main():
             disabled_columns = [col for col in df.columns if col != 'selected']
             
             # Calculate height to fit all rows plus header
-            all_rows_height = min((len(df) + 1) * 35 + 3, 500)  # Cap height at 500px
+            all_rows_height = (len(df) + 1) * 35 + 3  # Cap height at 500px
             
             st.data_editor(
                 df.style.apply(highlight_rows, axis=1),
