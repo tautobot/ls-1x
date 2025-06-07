@@ -465,7 +465,7 @@ def main():
                     st.session_state.selected_matches.style.apply(highlight_rows, axis=1),
                     use_container_width=True,
                     hide_index=True,
-                    height=(len(st.session_state.selected_matches) + 1) * 35 + 3,
+                    height=5 * 35 + 3,
                     column_config={k: v for k, v in column_config.items() if k != 'selected'},
                     key='selected_matches_display'
                 )
@@ -476,7 +476,7 @@ def main():
                     empty_df,
                     use_container_width=True,
                     hide_index=True,
-                    height=(len(empty_df) + 1) * 35 + 3,
+                    height=5 * 35 + 3,
                     column_config={k: v for k, v in column_config.items() if k != 'selected'},
                     key='selected_matches_display'
                 )
