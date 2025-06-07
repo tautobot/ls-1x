@@ -460,14 +460,12 @@ def main():
         with tab2:
             # Selected Matches section
             st.markdown("##### Selected Matches")
-            # Calculate height for 5 rows (including header)
-            fixed_height = 6 * 35 + 3  # 5 data rows + 1 header row
             if not st.session_state.selected_matches.empty:
                 st.dataframe(
                     st.session_state.selected_matches.style.apply(highlight_rows, axis=1),
                     use_container_width=True,
                     hide_index=True,
-                    height=fixed_height,
+                    height=(len(df) + 1) * 35 + 3,
                     column_config={k: v for k, v in column_config.items() if k != 'selected'},
                     key='selected_matches_display'
                 )
@@ -478,7 +476,7 @@ def main():
                     empty_df,
                     use_container_width=True,
                     hide_index=True,
-                    height=fixed_height,
+                    height=(len(df) + 1) * 35 + 3,
                     column_config={k: v for k, v in column_config.items() if k != 'selected'},
                     key='selected_matches_display'
                 )
