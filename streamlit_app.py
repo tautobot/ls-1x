@@ -505,7 +505,6 @@ def main():
             st.data_editor(
                 df.style.apply(highlight_rows, axis=1),
                 use_container_width=True,
-                hide_index=True,
                 height=all_rows_height,
                 column_config=column_config,
                 key='live_matches',
