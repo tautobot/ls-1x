@@ -439,38 +439,25 @@ def main():
                             return ['color: #00FF00; opacity: 0.5'] * len(row)  # green
             return ['color: '] * len(row)  # white
         
-        # Create a summary table above the expander
-        st.markdown("#### Matches")
-        # Create a copy of the dataframe without the 'selected' column for display
-        summary_df = df.drop(columns=['selected']) if 'selected' in df.columns else df.copy()
+        # Create tabs for Matches table and Details
+        tab1, tab2 = st.tabs(["Matches", "Details"])
         
-        # Display the summary table with a fixed height
-        st.dataframe(
-            summary_df.style.apply(highlight_rows, axis=1),
-            use_container_width=True,
-            height=(len(df) + 1) * 35 + 3,
-            column_config={k: v for k, v in column_config.items() if k != 'selected'},
-            key='df_live_matches'
-        )
+        # Tab 1: Main Matches table
+        with tab1:
+            # Create a copy of the dataframe without the 'selected' column for display
+            summary_df = df.drop(columns=['selected']) if 'selected' in df.columns else df.copy()
+            
+            # Display the summary table with a fixed height
+            st.dataframe(
+                summary_df.style.apply(highlight_rows, axis=1),
+                use_container_width=True,
+                height=(len(df) + 1) * 35 + 3,
+                column_config={k: v for k, v in column_config.items() if k != 'selected'},
+                key='df_live_matches'
+            )
         
-        # # Add pagination controls below the main table
-        # col1, col2 = st.columns(2)
-        # with col1:
-        #     st.session_state.page_num = st.number_input("Page Number", min_value=1, value=st.session_state.page_num)
-        # with col2:
-        #     st.session_state.page_size = st.selectbox("Page Size", options=[10, 25, 50, 100], 
-        #                                             index=[10, 25, 50, 100].index(st.session_state.page_size) 
-        #                                             if st.session_state.page_size in [10, 25, 50, 100] else 2)
-        
-        # Add some space before the expander
-        st.markdown("---")
-        
-        # # Update the page_num and page_size variables
-        # page_num = st.session_state.page_num
-        # page_size = st.session_state.page_size
-        
-        # Create a single expander for both Selected and All Matches
-        with st.expander("Matches", expanded=False):
+        # Tab 2: Selected and All Matches (previously in expander)
+        with tab2:
             # Selected Matches section
             st.markdown("##### Selected Matches")
             # Calculate height for 5 rows (including header)
