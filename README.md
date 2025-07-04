@@ -18,7 +18,7 @@ pip install poetry
 ```
 
 3. Configure project
-`copy .env-template .env`
+`cp .env-template .env`
 then install dependencies
 `poetry install`
 
@@ -66,9 +66,14 @@ VPC network → Firewall rules
 	4.	Fill in the form:
 Name: streamlit
 Target tags: streamlit
-Source filter: IP ranges
-Source IP ranges: 0.0.0.0/0
-Protocol and ports: tcp:8501
+Allow 
+    Targets: All instances in the network
+    Source filter: IPv4 ranges
+    Source IP ranges: 0.0.0.0/0
+    Protocol and ports:
+        √ Specified protocols and ports
+        √ TCP 
+        Ports:8501
 
 
 # NGINX
