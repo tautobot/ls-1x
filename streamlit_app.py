@@ -202,7 +202,15 @@ def page_load():
             label="QE Link",
             display_text="QE Link",
             width="small"
-        )
+        ),
+        "h1_scores": st.column_config.Column(
+            label="H1 Scored",
+            width=70
+        ),
+        "h2_scores": st.column_config.Column(
+            label="H2 Scored",
+            width=70
+        ),
 
     }
 # End Region
@@ -246,6 +254,8 @@ def covert_json_to_dataframe(j_data):
             "quick_events_url",
             "video",
             "freeze_time",
+            "h1_scores",
+            "h2_scores",
         )
     )
     # Add selected column with default False
@@ -415,10 +425,9 @@ def main():
                             )
                         ):
                         if (
-                            ':' in str(row.scores) and
+                            ':' in str(row.h1_scores) and
                             ':' in str(row.time_match) and
-                            0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
-                        row.scores.split(',')[0]) <= 720
+                            0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(row.h1_scores.split(',')[0]) <= 720
                         ):
                             return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                         else:
@@ -429,10 +438,9 @@ def main():
                         row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
                     ):
                         if (
-                            ':' in str(row.scores) and
+                            ':' in str(row.h2_scores) and
                             ':' in str(row.time_match) and
-                            0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(
-                            row.scores.split(',')[0]) <= 600
+                            0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(row.h2_scores.split(',')[0]) <= 600
                         ):
                             return ['color: #FFA500; opacity: 0.5'] * len(row)  # orange
                         else:

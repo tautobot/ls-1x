@@ -798,13 +798,26 @@ def json_loads(payload, k, v):
 
 
 def convert_timematch_to_seconds(time_match):
-    if not is_integer(time_match[:2]):
-        return 0
-    if not is_integer(time_match[-2:]):
-        return 0
-    min_tm = int(time_match[:2])
-    sec_tm = int(time_match[-2:])
-    return min_tm * 60 + sec_tm
+    # Handle format like "46:01+5" (mm:ss+extra_minutes)
+    if '+' in time_match:
+        base_time, extra_minutes = time_match.split('+')
+        # Parse base time (mm:ss)
+        if ':' in base_time:
+            min_tm, sec_tm = base_time.split(':')
+            if not is_integer(min_tm) or not is_integer(sec_tm):
+                return 0
+            total_minutes = int(min_tm) + int(extra_minutes)
+            total_seconds = total_minutes * 60 + int(sec_tm)
+            return total_seconds
+        else:
+            return 0
+    
+    # Handle standard format like "46:01" (mm:ss)
+    else:
+        min_tm, sec_tm = time_match.split(':')
+        if not is_integer(min_tm) or not is_integer(sec_tm):
+            return 0
+        return int(min_tm) * 60 + int(sec_tm)
 
 
 # def convert_uptotime_to_seconds(up_to_time):
@@ -1075,20 +1088,6 @@ def sort_json(data, keys=itemgetter('remark_coef'), reverse=True):
 #         print(f"Error: {str(e)}")
 
 
-def check_scores(old_match, new_match):
-    team_score = 0
-    if old_match['match_id'] == new_match['match_id']:
-        if old_match['team1_score'] < new_match['team1_score']:
-            team_score = 1
-        elif old_match['team1_score'] > new_match['team1_score']:
-            team_score = -1
-        elif old_match['team2_score'] < new_match['team2_score']:
-            team_score = 2
-        elif old_match['team2_score'] > new_match['team2_score']:
-            team_score = -2
-    return team_score
-
-
 async def check_rules(start_prediction, current_prediction, score_team1, score_team2, half, time_sec):
     # Check risk for betting under
     total_score = score_team1 + score_team2
@@ -1099,7 +1098,6 @@ async def check_rules(start_prediction, current_prediction, score_team1, score_t
         #  #2 Check red cards into prediction
         #  #3 total scores prediction in 2nd half go to reduced more than 50% from start prediction
         #     Bet over total scores
-        # start_prediction < 3: The match is predicted low scores
         if 0 < start_prediction <= 3 or (start_prediction == 0 and total_score*2 < current_prediction):
             # The situation seems going exact start prediction until close to the end of half
             if total_score < start_prediction:
@@ -1284,7 +1282,6 @@ def pagination(array, page, limit):
 
 
 if __name__ == "__main__":
-
     # Example usage
     # import asyncio
     #
@@ -1305,4 +1302,3 @@ if __name__ == "__main__":
     # send_email_smtp(['trieutruong.dev@gmail.com', 'kytrieu.truong@gmail.com'])
 
     pass
-
