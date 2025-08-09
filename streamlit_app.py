@@ -186,32 +186,32 @@ def page_load():
         ),
         "scores": st.column_config.Column(
             label="Scored",
-            width=150
+            width=80
         ),
         "url": st.column_config.LinkColumn(
             label="Link",
             display_text="Link",
-            width="small"
+            width="50"
         ),
         "h1_url": st.column_config.LinkColumn(
             label="H1 Link",
             display_text="H1 Link",
-            width="small"
+            width="50"
         ),
         "quick_events_url": st.column_config.LinkColumn(
             label="QE Link",
             display_text="QE Link",
-            width="small"
-        ),
-        "h1_scores": st.column_config.Column(
-            label="H1 Scored",
-            width=70
+            width="50"
         ),
         "h2_scores": st.column_config.Column(
             label="H2 Scored",
-            width=70
+            width=80
         ),
-
+        "h1_scores": st.column_config.Column(
+            label="H1 Scored",
+            width=80
+        ),
+        
     }
 # End Region
 
