@@ -191,25 +191,25 @@ def page_load():
         "url": st.column_config.LinkColumn(
             label="Link",
             display_text="Link",
-            width="50"
+            width="small"
         ),
         "h1_url": st.column_config.LinkColumn(
             label="H1 Link",
             display_text="H1 Link",
-            width="50"
+            width="small"
         ),
         "quick_events_url": st.column_config.LinkColumn(
             label="QE Link",
             display_text="QE Link",
-            width="50"
+            width="small"
         ),
         "h2_scores": st.column_config.Column(
             label="H2 Scored",
-            width=80
+            width=70
         ),
         "h1_scores": st.column_config.Column(
             label="H1 Scored",
-            width=80
+            width=70
         ),
         
     }
