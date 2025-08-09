@@ -448,7 +448,7 @@ def main():
             return ['color: '] * len(row)  # white
         
         # Create tabs for Matches table and Details
-        tab1, tab2 = st.tabs(["Matches", "Details"])
+        tab1, tab2, tab3 = st.tabs(["Matches", "Details", "MfB"])
         
         # Tab 1: Main Matches table
         with tab1:
@@ -519,6 +519,128 @@ def main():
                 num_rows="fixed",  # Prevent adding rows
                 on_change=handle_selection,
                 disabled=disabled_columns
+            )
+
+        # Tab 3: MfB - Auto-select orange matches
+        with tab3:
+            # Initialize MfB selected matches if not exists
+            if 'mfb_selected_matches' not in st.session_state:
+                st.session_state.mfb_selected_matches = pd.DataFrame()
+            
+            # Function to check if a row should be orange (auto-selected)
+            def is_orange_row(row):
+                if pd.isna(row.team1_shots) and pd.isna(row.team2_shots):
+                    return False
+
+                team1_shots = str(row.team1_shots) if pd.notna(row.team1_shots) else '0'
+                team2_shots = str(row.team2_shots) if pd.notna(row.team2_shots) else '0'
+
+                team1_shots_total = sum(int(x.strip()) for x in team1_shots.split('+') if x.strip().isdigit())
+                team2_shots_total = sum(int(x.strip()) for x in team2_shots.split('+') if x.strip().isdigit())
+                total_shots = team1_shots_total + team2_shots_total
+
+                if row.half == '1':
+                    if total_shots >= 11:
+                        return False
+                else:
+                    if total_shots >= 22:
+                        return False
+        
+                if row.prediction:
+                    if float(row.cur_prediction) > 3.5 or row.half not in ('1', '2'):
+                        return False
+
+                    if row.half == '1':
+                        if (
+                                (
+                                    float(row.prediction) <= 2.5 and
+                                    row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
+                                ) or 
+                                (
+                                    float(row.prediction) <= 3 and
+                                    row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
+                                )
+                            ):
+                            if (
+                                ':' in str(row.h1_scores) and
+                                ':' in str(row.time_match) and
+                                0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(row.h1_scores.split(',')[0]) <= 350
+                            ):
+                                return True  # This would be orange
+                    elif row.half == '2':
+                        if (
+                            float(row.prediction) <= 3 and
+                            row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
+                        ):
+                            if (
+                                ':' in str(row.h2_scores) and
+                                ':' in str(row.time_match) and
+                                0 < utils.convert_timematch_to_seconds(row.time_match) - utils.convert_timematch_to_seconds(row.h2_scores.split(',')[0]) <= 350
+                            ):
+                                return True  # This would be orange
+                return False
+            
+            # Auto-select orange rows
+            orange_rows = df[df.apply(is_orange_row, axis=1)]
+            
+            # Always update mfb_selected_matches to sync with current data
+            if not orange_rows.empty:
+                # Remove 'selected' column if it exists for the MfB selected matches
+                orange_rows_clean = orange_rows.drop(columns=['selected']) if 'selected' in orange_rows.columns else orange_rows.copy()
+                st.session_state.mfb_selected_matches = orange_rows_clean
+            else:
+                # Clear selected matches if no orange rows exist
+                st.session_state.mfb_selected_matches = pd.DataFrame()
+            
+            # Selected Matches section
+            st.markdown("##### Selected MfB")
+            if not st.session_state.mfb_selected_matches.empty:
+                # Calculate height to fit all selected rows plus header
+                selected_rows_height = (len(st.session_state.mfb_selected_matches) + 1) * 35 + 3
+                st.dataframe(
+                    st.session_state.mfb_selected_matches.style.apply(highlight_rows, axis=1),
+                    use_container_width=True,
+                    hide_index=True,
+                    height=selected_rows_height,
+                    column_config={k: v for k, v in column_config.items() if k != 'selected'},
+                    key='mfb_selected_matches_display'
+                )
+            else:
+                # Create an empty DataFrame with the same columns
+                empty_df = pd.DataFrame(columns=[col for col in column_config.keys() if col != 'selected'])
+                st.dataframe(
+                    empty_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    height=5 * 35 + 3,
+                    column_config={k: v for k, v in column_config.items() if k != 'selected'},
+                    key='mfb_selected_matches_display'
+                )
+            
+            # Add Clear button below Selected Matches
+            if st.button('Clear MfB Selected Matches'):
+                # Clear MfB selected matches
+                st.session_state.mfb_selected_matches = pd.DataFrame()
+                st.rerun()
+            
+            # Add a divider between sections
+            st.markdown("---")
+            
+            # All Matches section
+            st.markdown("##### All Matches")
+            
+            # Create a copy of the dataframe without the 'selected' column for display
+            all_matches_df = df.drop(columns=['selected']) if 'selected' in df.columns else df.copy()
+            
+            # Calculate height to fit all rows plus header
+            all_rows_height = (len(all_matches_df) + 1) * 35 + 3
+            
+            st.dataframe(
+                all_matches_df.style.apply(highlight_rows, axis=1),
+                use_container_width=True,
+                height=all_rows_height,
+                column_config={k: v for k, v in column_config.items() if k != 'selected'},
+                key='mfb_all_matches'
             )
 
 if __name__ == "__main__":
