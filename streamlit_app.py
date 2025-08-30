@@ -131,6 +131,11 @@ def page_load():
             label="Time",
             width=70
         ),
+        "quick_events_url": st.column_config.LinkColumn(
+            label="QE Link",
+            display_text="QE Link",
+            width=30
+        ),
         "prediction": st.column_config.NumberColumn(
             label="Pre",
             format="%.1f",
@@ -196,11 +201,6 @@ def page_load():
         "h1_url": st.column_config.LinkColumn(
             label="H1 Link",
             display_text="H1 Link",
-            width="small"
-        ),
-        "quick_events_url": st.column_config.LinkColumn(
-            label="QE Link",
-            display_text="QE Link",
             width="small"
         ),
         "h2_scores": st.column_config.Column(
