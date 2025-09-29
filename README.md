@@ -18,11 +18,13 @@ pip install poetry
 ```
 
 3. Configure project
-`cp .env-template .env`
+```
+cp .env-template .env
+```
 then install dependencies
-`poetry install`
-
-
+```
+poetry install
+```
 4. Run Streamlit app (stapp.py)
 ```
 poetry shell
@@ -61,7 +63,7 @@ Here’s How to Fix It on GCP
 	1.	Go to your Google Cloud Console
 https://console.cloud.google.com/
 	2.	Navigate to:
-VPC network → Firewall rules
+VPC network → Firewall
 	3.	Click “Create Firewall Rule”
 	4.	Fill in the form:
 Name: streamlit
@@ -69,7 +71,7 @@ Target tags: streamlit
 Allow 
     Targets: All instances in the network
     Source filter: IPv4 ranges
-    Source IP ranges: 0.0.0.0/0
+    Source IPv4 ranges: 0.0.0.0/0
     Protocol and ports:
         √ Specified protocols and ports
         √ TCP 
