@@ -54,7 +54,17 @@ sudo ufw allow 8501
 
 Run Streamlit app headless
 ```
-nohup streamlit run app.py > app.log 2>&1 &
+nohup poetry run streamlit run app.py > app.log 2>&1 &
+```
+
+Kill streamlit process (if needed)
+```
+pkill -f "streamlit run"
+```
+
+Check streamlit process
+```
+ps aux | grep streamlit
 ```
 
 Here’s How to Fix It on GCP
