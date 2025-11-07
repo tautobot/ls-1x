@@ -469,11 +469,12 @@ def main():
             # Selected Matches section
             st.markdown("##### Selected Matches")
             if not st.session_state.selected_matches.empty:
+                seletced_matches = st.session_state.selected_matches
                 st.dataframe(
                     st.session_state.selected_matches.style.apply(highlight_rows, axis=1),
                     use_container_width=True,
                     hide_index=True,
-                    height=5 * 35 + 3,
+                    height=(len(seletced_matches) + 1) * 35 + 3,
                     column_config={k: v for k, v in column_config.items() if k != 'selected'},
                     key='selected_matches_display'
                 )
