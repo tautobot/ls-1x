@@ -42,13 +42,15 @@ def page_load():
     with col2:
         option1 = st.radio(
             "Filters:",
-            ["All", "Potential Match"],
+            ["All", "Potential Match", "Good Potential Match"],
             horizontal=True
         )
         if option1 == "All":
             filters = ''
         elif option1 == "Potential Match":
-            filters = "?risk=0"
+            filters = "?risk=0&risk=-1&risk=-2"
+        elif option1 == "Good Potential Match":
+            filters = "?risk=-1&risk=-2"
 
     pagination_cols = st.columns([1, 1, 2, 2, 2])
     with pagination_cols[0]:
@@ -256,6 +258,7 @@ def covert_json_to_dataframe(j_data):
             "freeze_time",
             "h1_scores",
             "h2_scores",
+            "risk"
         )
     )
     # Add selected column with default False
@@ -409,6 +412,10 @@ def main():
                 if total_shots >= 22:
                     return ['color: red; opacity: 0.5'] * len(row)
     
+            if row.risk == -1:
+                return ['color: pink; opacity: 0.5'] * len(row)
+            if row.risk == -2:
+                return ['color: cyan; opacity: 0.5'] * len(row)
             if row.prediction:
                 if float(row.cur_prediction) > 3.5 or row.half not in ('1', '2'):
                     return ['color: '] * len(row)  # white
