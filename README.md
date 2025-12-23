@@ -28,7 +28,7 @@ poetry install
 4. Run Streamlit app (stapp.py)
 ```
 poetry shell
-python -m streamlit run streamlit_app.py
+python -m streamlit run app.py
 ```
 
 Configure Streamlit to Run on Public IP
