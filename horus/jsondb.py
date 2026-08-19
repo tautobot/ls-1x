@@ -1,11 +1,21 @@
 import os
 import json
 import tempfile
+import threading
 from filelock import FileLock
 from horus.config import logger, JSON_DB_PATH
 
 COLLECTIONS = ('1x', '8x')
 LOCK_TIMEOUT = 10
+
+# Process-local mutex around every read-modify-write. The FileLock below handles
+# CROSS-process safety, but when the sync loops run in a background thread inside
+# the Streamlit process (see horus.json_sync.embedded), several writer threads (the
+# updater offloads jsondb calls via asyncio.to_thread) plus the Streamlit reader
+# share one process — and same-process fcntl locks don't reliably exclude each
+# other. This RLock guarantees intra-process serialization regardless. Always
+# acquired OUTSIDE the FileLock (consistent order => no deadlock).
+_PROCESS_LOCK = threading.RLock()
 
 
 def _lock(db_path):
@@ -53,7 +63,7 @@ def _load_unlocked(db_path):
 
 def ensure_db(db_path=None):
     db_path = db_path or JSON_DB_PATH
-    with _lock(db_path):
+    with _PROCESS_LOCK, _lock(db_path):
         if not os.path.exists(db_path):
             _save_atomic(_seed(), db_path)
 
@@ -61,7 +71,7 @@ def ensure_db(db_path=None):
 def _write_txn(mutate, db_path=None):
     # Serialize the read-modify-write cycle across processes.
     db_path = db_path or JSON_DB_PATH
-    with _lock(db_path):
+    with _PROCESS_LOCK, _lock(db_path):
         db = _load_unlocked(db_path)
         result = mutate(db)
         _save_atomic(db, db_path)
@@ -80,7 +90,7 @@ def next_id(records):
 
 def get_collection(source, db_path=None):
     db_path = db_path or JSON_DB_PATH
-    with _lock(db_path):
+    with _PROCESS_LOCK, _lock(db_path):
         db = _load_unlocked(db_path)
     return db.get(source, [])
 

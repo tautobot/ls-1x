@@ -8,6 +8,7 @@ from schedule import clear
 from operator import itemgetter
 from horus.json_server import JsonServerProcessor
 from horus.enums import MatchStatus
+from horus.json_sync.embedded import ensure_sync_running
 
 # Set page config as the first Streamlit command
 st.set_page_config(
@@ -16,6 +17,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# Populate the store from within the Streamlit process. On Streamlit Community
+# Cloud only `streamlit run` executes (no separate sync service), so start the
+# live-match sync loops in a background thread here — once per server process.
+# Set EMBEDDED_SYNC=0 to disable (e.g. when running sync_matches.py separately).
+ensure_sync_running()
 
 # Initialize global variables
 filters = None

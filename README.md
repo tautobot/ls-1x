@@ -57,6 +57,24 @@ if a provider host changes:
 | `SYNC_MATCH_UPDATER_INTERVAL` | `10` | seconds between updater cycles |
 | `SYNC_LOG_LEVEL` | `INFO` | `DEBUG` => human-readable console logs |
 | `JSON_SYNC_SOURCE` | `1x` | store collection the service writes into |
+| `EMBEDDED_SYNC` | `1` | run the sync in-process inside the Streamlit app (see below) |
+
+### How the sync runs — two modes
+
+The same finder+updater loops can run either way; pick per host:
+
+1. **In-process (default, `EMBEDDED_SYNC=1`)** — the Streamlit app starts the sync in a
+   daemon background thread on first load (`horus/json_sync/embedded.py`, wired into
+   `app.py`), once per server process and supervised (auto-restarts if it ever exits).
+   **This is what makes the app work on Streamlit Community Cloud**, which runs only
+   `streamlit run` and cannot host a separate service. No extra config or secrets are
+   needed — the committed `.env` plus built-in provider defaults are enough; the store
+   populates within a second or two of the app loading. Note Community Cloud apps sleep
+   when idle, so the sync runs while the app is awake (i.e. while someone is viewing it).
+
+2. **Standalone service (`EMBEDDED_SYNC=0`)** — run `sync_matches.py` as its own process
+   (systemd unit below) and set `EMBEDDED_SYNC=0` on the app so the two don't both write.
+   Use this on a VM/always-on host where you want the sync running independently of viewers.
 
 ### Deployment
 
