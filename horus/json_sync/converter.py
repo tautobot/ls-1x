@@ -70,7 +70,7 @@ class MatchState:
     h1_team2_score: str = ""      # away score at halftime
     h1_score: str = ""            # formatted "X - Y" at halftime
     freeze_time: int = 0          # freeze counter
-    risk: int = 0                 # risk flag
+    risk: int = 0                 # risk tier: -2 best / -1 low / 0 neutral / 1 high
 
 
 def detect_goals(
@@ -140,15 +140,84 @@ def update_prediction(curr: MatchData, state: MatchState) -> None:
 
 
 def update_risk(curr: MatchData, state: MatchState) -> None:
-    """Set risk=1 if prediction >= 4 (matches autobet logic)."""
-    if state.risk != 0:
+    """Recompute the match's risk tier every cycle (stateless).
+
+    Faithful port of autobet's ``compute_risk`` (agent.livescore
+    ``analytics/features.py``) — the ls-1x Streamlit app filters and colours on
+    exactly these values:
+
+        -2  cyan  — very low risk, "best opportunity"
+        -1  pink  — low risk
+         0  white — neutral (still a "Potential Match")
+         1  ——    — high risk (excluded from the potential-match filters)
+
+    Replaces the earlier stub that only ever emitted ``0``/``1``, which is why
+    the app's "Good Potential Match" filter and pink/cyan rows never lit up.
+
+    Field mapping into the converter's world:
+      * ``initial_prediction`` is the prediction the converter locks in
+        ``state.prediction`` (autobet's "initial_prediction"); ``None`` until it
+        locks (first <=10 min with a bookmaker total) -> treated as high risk.
+      * ``total_prediction`` is the live bookmaker total on ``curr``.
+      * ``minute`` is derived from the match clock (``curr.minute`` may be unset).
+    Recomputed fresh each call — a match legitimately moves between tiers as its
+    stats evolve, so risk must NOT be sticky.
+    """
+    on_h = curr.home_shots_on_target or 0
+    on_a = curr.away_shots_on_target or 0
+    off_h = curr.home_shots_off_target or 0
+    off_a = curr.away_shots_off_target or 0
+    total_shots = on_h + on_a + off_h + off_a
+
+    minute = curr.minute if curr.minute is not None else (curr.time_seconds or 0) // 60
+    allowed_shots = minute / 5 + 1
+
+    initial_prediction = float(state.prediction) if state.prediction else None
+    total_prediction = curr.total_prediction
+
+    # High risk: no locked prediction, or a goal-heavy prediction (initial or live).
+    if initial_prediction is None or initial_prediction >= 4:
+        state.risk = 1
         return
-    pred = curr.total_prediction
-    if pred and pred >= 4:
+    if total_prediction is not None and total_prediction >= 4:
         state.risk = 1
-    init_pred = float(state.prediction) if state.prediction else 0
-    if init_pred >= 4:
+        return
+
+    # High risk: shot rate outruns the expected baseline for the minute.
+    if total_shots > allowed_shots:
         state.risk = 1
+        return
+
+    # High risk: every stat is zero (a data-feed gap, not a genuinely quiet game).
+    if (
+        total_shots == 0
+        and (curr.home_attacks or 0) == 0
+        and (curr.away_attacks or 0) == 0
+        and (curr.home_dangerous_attacks or 0) == 0
+        and (curr.away_dangerous_attacks or 0) == 0
+    ):
+        state.risk = 1
+        return
+
+    # Low risk: prediction stable/declining, both teams active, shots controlled.
+    if (
+        initial_prediction <= 3
+        and total_prediction is not None
+        and 0 < total_prediction <= initial_prediction
+        and (on_h > 0 or on_a > 0)
+        and (curr.home_attacks or 0) > 0
+        and (curr.away_attacks or 0) > 0
+        and (curr.home_dangerous_attacks or 0) > 0
+        and (curr.away_dangerous_attacks or 0) > 0
+    ):
+        if total_shots <= allowed_shots * 2 / 3:
+            state.risk = -2  # very low risk — best opportunity
+            return
+        if total_shots <= allowed_shots * 3 / 4:
+            state.risk = -1  # low risk
+            return
+
+    state.risk = 0  # neutral
 
 
 def match_data_to_json(data: MatchData, state: MatchState) -> dict:

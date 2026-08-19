@@ -34,7 +34,7 @@ from horus.models import MatchData  # noqa: E402
 from horus.providers.base import BaseProvider  # noqa: E402
 from horus.json_sync.local_client import JsonLocalClient  # noqa: E402
 from horus.json_sync.service import JsonSyncService  # noqa: E402
-from horus.json_sync.converter import MatchState, match_data_to_json  # noqa: E402
+from horus.json_sync.converter import MatchState, match_data_to_json, update_risk  # noqa: E402
 
 SOURCE = "1x"
 
@@ -265,6 +265,45 @@ async def test_run_fails_fast_on_loop_crash():
     )
 
 
+async def test_update_risk_tiers():
+    """update_risk reproduces autobet's compute_risk: emits -2/-1/0/1 (not just 0/1),
+    which is what app.py's "Good Potential Match" filter and pink/cyan rows key on.
+    """
+    def mk(**kw):
+        base = dict(source="1xbet", source_match_id="r", league="L",
+                    home_team="A", away_team="B")
+        base.update(kw)
+        return MatchData(**base)
+
+    def risk_of(md, prediction=""):
+        st = MatchState(prediction=prediction)
+        update_risk(md, st)
+        return st.risk
+
+    # minute=30 -> allowed_shots = 30/5 + 1 = 7. Both teams active, a shot on target,
+    # prediction stable (<=3, live <= initial). total_shots gates the tier.
+    stable = dict(time_seconds=1800, total_prediction=2.5,
+                  home_shots_on_target=1, away_shots_on_target=0,
+                  home_shots_off_target=1, away_shots_off_target=1,  # total=3
+                  home_attacks=10, away_attacks=8,
+                  home_dangerous_attacks=3, away_dangerous_attacks=2)
+
+    check(risk_of(mk(**stable), "3") == -2, "risk -2 when total_shots<=allowed*2/3 (best opportunity)")
+    check(risk_of(mk(**{**stable, "away_shots_off_target": 3}), "3") == -1,  # total=5
+          "risk -1 when total_shots<=allowed*3/4 (low risk)")
+    check(risk_of(mk(**{**stable, "away_shots_off_target": 4}), "3") == 0,  # total=6
+          "risk 0 (neutral) when shots controlled but above the low-risk band")
+    check(risk_of(mk(time_seconds=1800, total_prediction=4.5), "4") == 1, "risk 1 when prediction>=4")
+    check(risk_of(mk(time_seconds=1800, total_prediction=2.0), "") == 1, "risk 1 when no locked prediction")
+    check(risk_of(mk(time_seconds=1800, total_prediction=2.0), "2") == 1, "risk 1 when all stats zero (feed gap)")
+    check(risk_of(mk(**{**stable, "home_shots_off_target": 8}), "3") == 1,  # total=10 > allowed 7
+          "risk 1 when shot rate exceeds baseline")
+    # Stateless: a match that was high-risk recomputes down once stats normalise.
+    st = MatchState(prediction="3", risk=1)
+    update_risk(mk(**stable), st)
+    check(st.risk == -2, "risk recomputes fresh each call (not sticky)")
+
+
 async def _run():
     tests = [
         test_finder_inserts_correctly_shaped_record,
@@ -272,6 +311,7 @@ async def _run():
         test_updater_updates_live_record,
         test_updater_deletes_on_ended_transition,
         test_run_fails_fast_on_loop_crash,
+        test_update_risk_tiers,
     ]
     for t in tests:
         print(f"- {t.__name__}")
