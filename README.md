@@ -4,6 +4,72 @@
 
 Introduce streamlit app
 
+## Data store
+
+Match data is stored in a local, in-process JSON file (`db.json` at the repo root) —
+there is **no external JSON server** and no network dependency. The store is read and
+written directly by `horus/json_server.py` (via `horus/jsondb.py`), which emulates the
+json-server query/id semantics the app relies on.
+
+- The file is auto-created (seeded as `{"1x": [], "8x": []}`) on first use if missing.
+- The path is configurable via `JSON_DB_PATH` in `.env` (leave empty to use `<repo>/db.json`).
+- Concurrent access from the Streamlit app and the sync service is made safe with
+  file locking (`filelock`) plus atomic writes.
+
+## Live-match sync (`sync_matches.py`)
+
+Match data is produced **in-process** by a self-contained sync service — ls-1x runs
+completely alone, with **no external json-server and no separate sync container**.
+
+```
+poetry run python sync_matches.py
+```
+
+What it does (`horus/json_sync/`):
+
+- **Fetches** live football matches from the bookmaker providers (`1xbet`, `8xbet`)
+  over HTTP (`horus/providers/`). The providers need no secrets — only base URLs.
+- **Converts** each match to the exact autobet JSON shape the Streamlit app renders
+  (`horus/json_sync/converter.py`) — all values as strings, keyed on the `id` field.
+- **Writes** directly into the in-process store (`horus/jsondb.py`) via an async
+  in-process client (`horus/json_sync/local_client.py`), with upsert on POST and
+  idempotent DELETE.
+- A **finder loop** discovers new live matches; an **updater loop** updates them and
+  robustly deletes ended matches (freeze-time / wall-clock / orphan detection). Both
+  run concurrently in one process, so there is **no separate cleanup service**.
+
+This supersedes the legacy `fetch_matches.py` + `delete_ended_matches.py` scripts
+(now deprecated, retained for reference only) and their systemd units.
+
+### Sync configuration (`.env`)
+
+Provider settings use `SYNC_*` env names to avoid colliding with the legacy `X8_*`
+vars (which the retired fetch code used). All have sensible defaults — override only
+if a provider host changes:
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `SYNC_X1_BASE_URL` | `https://1xbet.mobi` | 1xbet API base URL |
+| `SYNC_X8_BASE_URL` | `https://api.8xbet.com` | 8xbet API base URL |
+| `SYNC_X8_ORIGIN` | `https://8xbet.com` | 8xbet origin header |
+| `SYNC_X8_DOMAIN` | `api.8xbet.com` | 8xbet authority header |
+| `SYNC_MATCH_FINDER_INTERVAL` | `30` | seconds between finder cycles |
+| `SYNC_MATCH_UPDATER_INTERVAL` | `10` | seconds between updater cycles |
+| `SYNC_LOG_LEVEL` | `INFO` | `DEBUG` => human-readable console logs |
+| `JSON_SYNC_SOURCE` | `1x` | store collection the service writes into |
+
+### Deployment
+
+`devops/deploy.sh` installs/enables a single systemd unit `systemds/1xbet.sync.service`
+running `sync_matches.py`, and retires the old `1xbet` / `1xbet.clean` units. The unit is
+a template — its `__APP_HOME__` / `__VENV_PYTHON__` placeholders are substituted at install
+time with the real clone path and the poetry virtualenv's python, so the service points at
+the actual deploy location regardless of where the repo lives.
+
+Because the sync service handles both discovery and ended-match cleanup, and its `run()`
+fails fast (exits) if either internal loop dies, systemd's `Restart=always` cleanly relaunches
+a healthy service on any unexpected crash.
+
 ## Install Python, Poetry
   
 1. Install Python 3.10.11 or above

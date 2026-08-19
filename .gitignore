@@ -126,3 +126,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Local file-backed JSON store (db.json is committed as the empty seed;
+# runtime lock and temp files are not tracked)
+db.json.lock
+.db_*.tmp

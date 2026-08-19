@@ -62,7 +62,8 @@ X8_BALANCE       = os.environ.get('X8_BALANCE')
 X8_COOKIE        = os.environ.get('X8_COOKIE')
 X8_AUTH          = os.environ.get('X8_AUTH')
 
-JSON_SERVER_BASE_URL = os.environ.get('JSON_SERVER_BASE_URL')
+JSON_SERVER_BASE_URL = os.environ.get('JSON_SERVER_BASE_URL')  # retired, kept so stale .env does not break; no longer used
+JSON_DB_PATH = os.environ.get('JSON_DB_PATH') or os.path.join(CODE_HOME, 'db.json')
 #region MAIN@load config
 def load_config_file(file_path):
     global logger

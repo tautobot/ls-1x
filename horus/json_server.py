@@ -1,5 +1,5 @@
-import requests
-from horus.config import logger, JSON_SERVER_BASE_URL
+from horus.config import logger
+from horus import jsondb
 
 
 def convert_data_types(data):
@@ -19,80 +19,106 @@ def convert_data_types(data):
     return converted_data
 
 
+def parse_filters(filters):
+    # '?risk=0&risk=-1&status=on_going_h1' -> {'risk': ['0', '-1'], 'status': ['on_going_h1']}
+    # None or '' -> {}. Values are kept as strings (json-server compares as strings).
+    parsed = {}
+    if not filters:
+        return parsed
+    query = filters[1:] if filters.startswith('?') else filters
+    for pair in query.split('&'):
+        if not pair:
+            continue
+        if '=' not in pair:
+            logger.error(f'skipping malformed filter segment: {pair}')
+            continue
+        key, value = pair.split('=', 1)
+        parsed.setdefault(key, []).append(value)
+    return parsed
+
+
+def make_predicate(filters):
+    # AND across fields, OR within a field, string-coerced equality. Missing field = no match.
+    parsed = filters if isinstance(filters, dict) else parse_filters(filters)
+    if not parsed:
+        return lambda record: True
+
+    def predicate(record):
+        for field, values in parsed.items():
+            if field not in record:
+                return False
+            if str(record[field]) not in values:
+                return False
+        return True
+    return predicate
+
+
+class _FakeResponse(object):
+    # Minimal, requests.Response-compatible shim: exposes .status_code and .json().
+    def __init__(self, status_code, data):
+        self.status_code = status_code
+        self._data = data
+
+    def json(self):
+        return self._data
+
+
 class JsonServerProcessor(object):
 
     def __init__(self, source, params, **kwargs):
         self.source = source
         self.params = params
-        self.headers = {
-            'accept': 'application/json, text/plain, */*',
-        }
-
-    def _get(self, url, params):
-        response = {}
-        try:
-            response = requests.get(url, headers=self.headers, params=params)
-            if response.status_code == 200:
-                data = {
-                    'success': True,
-                    'data'   : convert_data_types(response.json()) if not self.params.get('skip_convert_data_types') else response.json(),
-                }
-                return data
-            else:
-                logger.error(f"Request failed with status code: {response.status_code}")
-                # Access the error message, if available
-                error_message = response.text
-                logger.error(error_message)
-        except requests.exceptions.RequestException as e:
-            logger.error(f'RequestException: {e}')
-        except ConnectionResetError:
-            logger.error('ConnectionResetError')
-        data = {
-            'success': False,
-            'data'   : response,
-        }
-
-        return data
 
     def get_all_matches(self, filters=None):
-        if filters is not None:
-            url = f"{JSON_SERVER_BASE_URL}/{self.source}{filters}"
-        else:
-            url = f"{JSON_SERVER_BASE_URL}/{self.source}"
-        # return response
-        res_ = self._get(url, {})
-
-        return res_
+        try:
+            data = jsondb.query_collection(self.source, make_predicate(filters))
+            return {
+                'success': True,
+                'data'   : data if self.params.get('skip_convert_data_types') else convert_data_types(data),
+            }
+        except Exception as e:
+            logger.error(f'get_all_matches failed: {e}')
+            return {'success': False, 'data': []}
 
     def get_match(self):
-        url = f"{JSON_SERVER_BASE_URL}/{self.source}/{self.params.get('id')}"
-        # return response
-        data = self._get(url, {})
-
-        return data
+        try:
+            record = jsondb.get_record(self.source, self.params.get('id'))
+            if record is None:
+                return {'success': False, 'data': None}
+            data = record if self.params.get('skip_convert_data_types') else convert_data_types([record])[0]
+            return {'success': True, 'data': data}
+        except Exception as e:
+            logger.error(f'get_match failed: {e}')
+            return {'success': False, 'data': None}
 
     def post_match(self):
-        # data = self.params
-
-        url = f"{JSON_SERVER_BASE_URL}/{self.source}"
-        # return response
-        resp_ = requests.post(url, headers=self.headers, data=self.params)
-
-        return resp_
+        try:
+            record = jsondb.insert_record(self.source, self.params)
+            return _FakeResponse(201, record)
+        except ValueError as e:
+            logger.error(f'post_match conflict: {e}')
+            return _FakeResponse(409, {'error': str(e)})
+        except Exception as e:
+            logger.error(f'post_match failed: {e}')
+            return _FakeResponse(500, {'error': str(e)})
 
     def put_match(self):
-        url = f"{JSON_SERVER_BASE_URL}/{self.source}/{self.params.get('id')}"
-        # return response
-        resp_ = requests.put(url, headers=self.headers, data=self.params)
-
-        return resp_
+        try:
+            record = jsondb.update_record(self.source, self.params.get('id'), self.params)
+            if record is None:
+                return _FakeResponse(404, {})
+            return _FakeResponse(200, record)
+        except Exception as e:
+            logger.error(f'put_match failed: {e}')
+            return _FakeResponse(500, {'error': str(e)})
 
     def delete_match(self):
-        url = f"{JSON_SERVER_BASE_URL}/{self.source}/{self.params.get('id')}"
-        # return response
-        resp_ = requests.delete(url, headers=self.headers, data={})
-
-        return resp_
+        try:
+            removed = jsondb.delete_record(self.source, self.params.get('id'))
+            return _FakeResponse(200 if removed else 404, {})
+        except Exception as e:
+            logger.error(f'delete_match failed: {e}')
+            return _FakeResponse(500, {'error': str(e)})
 
 
 if __name__ == "__main__":

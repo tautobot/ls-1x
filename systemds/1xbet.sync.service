@@ -1,0 +1,19 @@
+[Unit]
+Description=1xbet.sync.service
+After=network.target
+
+[Service]
+# __APP_HOME__ and __VENV_PYTHON__ are substituted at install time by
+# devops/deploy.sh (see the sed step there) so the unit always points at the
+# real clone path + poetry virtualenv, regardless of where the repo lives.
+WorkingDirectory=__APP_HOME__
+ExecStart=__VENV_PYTHON__ sync_matches.py
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+IgnoreSIGPIPE=true
+Restart=always
+RestartSec=3
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

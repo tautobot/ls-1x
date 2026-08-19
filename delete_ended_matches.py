@@ -1,3 +1,8 @@
+# DEPRECATED: superseded by sync_matches.py (horus/json_sync).
+# Ended-match cleanup is now handled internally by JsonSyncService's updater loop
+# (freeze-time / wall-clock / orphan detection), so a separate cleanup service is
+# no longer needed. This file is retained for reference only and is no longer
+# wired into deployment (systemds/ / devops/deploy.sh).
 import schedule
 import time
 import asyncio
