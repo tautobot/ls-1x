@@ -27,9 +27,13 @@ async def main() -> None:
     """
     configure_logging()
 
+    # settings.http_proxy (env SYNC_HTTP_PROXY) routes provider requests through a
+    # proxy — needed when the host's IP is blocked by the bookmaker (e.g. a
+    # datacenter IP like Streamlit Cloud). Empty/unset => direct connection.
     http_client = httpx.AsyncClient(
         timeout=httpx.Timeout(10.0),
         limits=httpx.Limits(max_connections=20),
+        proxy=settings.http_proxy or None,
     )
     providers = build_providers(settings, http_client)
     # db_path=None -> uses horus.jsondb's JSON_DB_PATH default (<repo>/db.json)

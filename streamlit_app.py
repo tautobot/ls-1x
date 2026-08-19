@@ -9,6 +9,7 @@ from operator import itemgetter
 from horus.json_server import JsonServerProcessor
 from horus.enums import MatchStatus
 from horus.json_sync.embedded import ensure_sync_running
+from streamlit_autorefresh import st_autorefresh
 
 # Set page config as the first Streamlit command
 st.set_page_config(
@@ -23,6 +24,11 @@ st.set_page_config(
 # live-match sync loops in a background thread here — once per server process.
 # Set EMBEDDED_SYNC=0 to disable (e.g. when running sync_matches.py separately).
 ensure_sync_running()
+
+# Auto-rerun every 15s so live data written by the background sync shows up
+# without a manual browser refresh. Keyed so it doesn't clash with widgets;
+# session_state (selected_ids etc.) persists across these reruns.
+st_autorefresh(interval=15000, key="livescore_autorefresh")
 
 # Initialize global variables
 filters = None

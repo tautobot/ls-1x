@@ -42,6 +42,12 @@ class SyncSettings(BaseSettings):
 
     log_level: str = "INFO"
 
+    # Optional outbound proxy for provider HTTP requests. Bookmakers often block
+    # datacenter IP ranges (e.g. Streamlit Community Cloud), so from a blocked host
+    # set SYNC_HTTP_PROXY to a proxy in an allowed region, e.g.
+    # "http://user:pass@host:port". Empty/unset => direct connection.
+    http_proxy: str | None = None
+
 
 settings = SyncSettings()
 
@@ -59,6 +65,10 @@ def configure_logging() -> None:
             structlog.processors.StackInfoRenderer(),
             structlog.dev.set_exc_info,
             structlog.processors.TimeStamper(fmt="iso"),
+            # Render exc_info into the output. Without this, JSONRenderer drops the
+            # traceback entirely (logs show only "exc_info": true) — which is why a
+            # provider failure on Streamlit Cloud was undiagnosable.
+            structlog.processors.format_exc_info,
             (
                 structlog.dev.ConsoleRenderer()
                 if settings.log_level == "DEBUG"

@@ -56,8 +56,17 @@ if a provider host changes:
 | `SYNC_MATCH_FINDER_INTERVAL` | `30` | seconds between finder cycles |
 | `SYNC_MATCH_UPDATER_INTERVAL` | `10` | seconds between updater cycles |
 | `SYNC_LOG_LEVEL` | `INFO` | `DEBUG` => human-readable console logs |
+| `SYNC_HTTP_PROXY` | _(unset)_ | route provider requests via a proxy when the host IP is blocked (see note) |
 | `JSON_SYNC_SOURCE` | `1x` | store collection the service writes into |
 | `EMBEDDED_SYNC` | `1` | run the sync in-process inside the Streamlit app (see below) |
+
+> **Bookmaker IP blocking:** the providers fetch directly from the bookmaker APIs,
+> which commonly **block datacenter IP ranges** — including Streamlit Community
+> Cloud. If `db.json` stays empty on Cloud and the logs show `x1_http_error` /
+> `x1_json_error` (a 403/451 or an HTML block page), the host IP is blocked. Set
+> `SYNC_HTTP_PROXY` to an HTTP(S) proxy in an allowed region (Streamlit → Settings →
+> Secrets: `SYNC_HTTP_PROXY = "http://user:pass@host:port"`), or run the sync from a
+> host/region the bookmaker allows.
 
 ### How the sync runs — two modes
 

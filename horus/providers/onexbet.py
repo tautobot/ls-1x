@@ -173,9 +173,24 @@ class OneXBetProvider(BaseProvider):
     async def _get(self, url: str) -> dict | None:
         resp = await self.client.get(url, headers=self.headers, timeout=10.0)
         if resp.status_code != 200:
-            logger.warning("x1_http_error", status=resp.status_code, url=url)
+            # Include a body snippet so an IP/geo block page (403/451/HTML/captcha)
+            # is diagnosable from the logs instead of a bare status code.
+            logger.warning(
+                "x1_http_error", status=resp.status_code, url=url,
+                content_type=resp.headers.get("content-type"),
+                body=resp.text[:300],
+            )
             return None
-        return resp.json()
+        try:
+            return resp.json()
+        except Exception:
+            # A 200 that isn't JSON is typically an anti-bot / block interstitial.
+            logger.warning(
+                "x1_json_error", url=url,
+                content_type=resp.headers.get("content-type"),
+                body=resp.text[:300],
+            )
+            raise
 
     async def _get_live_count(self) -> int:
         url = (

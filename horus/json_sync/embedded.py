@@ -15,9 +15,22 @@ Set ``EMBEDDED_SYNC=0`` to disable — e.g. a VM/host deployment that instead ru
 """
 from __future__ import annotations
 
+import asyncio
 import os
 import threading
+import time
 
+import structlog
+
+# Import the whole sync chain EAGERLY, in the main thread, at module import time
+# (streamlit_app.py imports this module during its first run). If these imports
+# were done lazily inside the background thread, they could race with Streamlit's
+# rerun re-imports of overlapping `horus.*` modules and raise
+# `KeyError: 'horus.json_server'` mid-import. Loading everything once up front on
+# the main thread makes every later `from horus... import` a safe dict lookup.
+from horus.json_sync.runner import main as _sync_main  # noqa: E402
+
+_log = structlog.get_logger(service="json_sync.embedded")
 _started = False
 _guard = threading.Lock()
 
@@ -57,18 +70,10 @@ def _supervise() -> None:
     the whole sync is relaunched after a short backoff — the same resilience the
     systemd ``Restart=always`` unit gives the standalone service.
     """
-    import asyncio
-    import time
-
-    import structlog
-
-    from horus.json_sync.runner import main as sync_main
-
-    log = structlog.get_logger(service="json_sync.embedded")
     while True:
         try:
-            asyncio.run(sync_main())
-            log.warning("embedded_sync_exited_restarting")
+            asyncio.run(_sync_main())
+            _log.warning("embedded_sync_exited_restarting")
         except Exception:
-            log.exception("embedded_sync_crashed_restarting")
+            _log.exception("embedded_sync_crashed_restarting")
         time.sleep(5)

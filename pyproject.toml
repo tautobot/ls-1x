@@ -19,6 +19,7 @@ structlog = "^26.1.0"
 pydantic = "^2.13.4"
 pydantic-settings = "^2.15.0"
 tenacity = "^9.1.4"
+streamlit-autorefresh = "^1.0.1"
 
 [build-system]
 requires = ["poetry-core"]
