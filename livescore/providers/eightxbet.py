@@ -7,9 +7,9 @@ import httpx
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from horus.models import MatchData
-from horus.providers.base import BaseProvider
-from horus.providers.onexbet import _extract_stoppage
+from livescore.models import MatchData
+from livescore.providers.base import BaseProvider
+from livescore.providers.onexbet import _extract_stoppage
 
 logger = structlog.get_logger()
 

@@ -2,13 +2,13 @@ import time
 import requests
 import pandas as pd
 import streamlit as st
-from horus import utils
-from horus.config import logger
+from livescore import utils
+from livescore.config import logger
 from schedule import clear
 from operator import itemgetter
-from horus.json_server import JsonServerProcessor
-from horus.enums import MatchStatus
-from horus.json_sync.embedded import ensure_sync_running
+from livescore.json_server import JsonServerProcessor
+from livescore.enums import MatchStatus
+from livescore.json_sync.embedded import ensure_sync_running
 from streamlit_autorefresh import st_autorefresh
 
 # Set page config as the first Streamlit command

@@ -7,8 +7,8 @@ import httpx
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from horus.models import MatchData
-from horus.providers.base import BaseProvider
+from livescore.models import MatchData
+from livescore.providers.base import BaseProvider
 
 logger = structlog.get_logger()
 
@@ -456,6 +456,37 @@ class OneXBetProvider(BaseProvider):
         league_id = fields.get("league_id") or ""
         match_url = f"{self.base_url}/en/live/football/{league_id}-{league_name}/{match_id}"
 
+        # Sub-game links + "QE Link" (Quick events) — ported from autobet
+        # onexbet.py:1951-1969. Each half and the "Quick events" market are exposed
+        # by 1xBet as their own sub-games inside the SG ("halfs") array; their URLs
+        # reuse this match's league slug but swap in the sub-game id.
+        h1_game_id = h2_game_id = quick_game_id = None
+        halfs = fields.get("halfs")
+        if isinstance(halfs, list):
+            for g in halfs:
+                if not isinstance(g, dict) or g.get("MG") != match_id:
+                    continue
+                tg = g.get("TG")
+                if tg == "Quick events":
+                    quick_game_id = g.get("I")
+                elif not tg:  # half sub-games carry no TG group name
+                    if g.get("P") == 1:
+                        h1_game_id = g.get("I")
+                    elif g.get("P") == 2:
+                        h2_game_id = g.get("I")
+
+        def _game_url(gid: Any) -> str | None:
+            if not gid:
+                return None
+            return f"{self.base_url}/en/live/football/{league_id}-{league_name}/{gid}"
+
+        h1_url = _game_url(h1_game_id)
+        h2_url = _game_url(h2_game_id)
+        quick_events_url = _game_url(quick_game_id)
+
+        # Live-video availability flag (1xBet "VA"), carried through like autobet.
+        video = raw.get("VA")
+
         return MatchData(
             source="1xbet",
             source_match_id=str(match_id),
@@ -469,6 +500,10 @@ class OneXBetProvider(BaseProvider):
             status=status,
             stoppage_time=stoppage_time,
             match_url=match_url,
+            h1_url=h1_url,
+            h2_url=h2_url,
+            quick_events_url=quick_events_url,
+            video=video,
             total_prediction=total_prediction,
             initial_prediction=total_prediction if time_seconds <= 300 else None,
             home_possession=stats.get("home_possession"),

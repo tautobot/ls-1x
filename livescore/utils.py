@@ -2,10 +2,10 @@ import json
 import re
 import math
 import asyncio
-from horus.enums import Game, RISKS, BetTime
-import horus.apis as apis
+from livescore.enums import Game, RISKS, BetTime
+import livescore.apis as apis
 from dateutil.parser import parse, parserinfo
-from horus.config import X8_LIVE_FOOTBALL, X8_BASE_URL, TEMP_FOLDER, logger
+from livescore.config import X8_LIVE_FOOTBALL, X8_BASE_URL, TEMP_FOLDER, logger
 from operator import itemgetter
 
 

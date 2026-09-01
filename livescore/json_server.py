@@ -1,5 +1,5 @@
-from horus.config import logger
-from horus import jsondb
+from livescore.config import logger
+from livescore import jsondb
 
 
 def convert_data_types(data):

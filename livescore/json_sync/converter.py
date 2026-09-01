@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-from horus.models import MatchData
+from livescore.models import MatchData
 
 # Map agent.livescore status → autobet MatchStatus strings
 STATUS_MAP = {
@@ -43,6 +44,20 @@ def _time_match_str(time_seconds: int | None, stoppage_time: int | None = None) 
     if stoppage_time and stoppage_time > 0:
         return f"{base} +{stoppage_time}"
     return base
+
+
+def _video_str(video: Any) -> str:
+    """Render the 1xBet ``VA`` (video) value for the JSON store as a string.
+
+    ``VA`` is loosely typed across the feed — usually a scalar flag but sometimes
+    a list/dict of stream descriptors. Collapse containers to a 0/1 availability
+    flag; pass scalars through as strings; ``None`` becomes empty.
+    """
+    if video is None:
+        return ""
+    if isinstance(video, (list, dict)):
+        return "1" if video else "0"
+    return str(video)
 
 
 def _half_from_status(status: str) -> int:
@@ -252,6 +267,10 @@ def match_data_to_json(data: MatchData, state: MatchState) -> dict:
         "team1_redcard": str(data.home_red_cards or 0),
         "team2_redcard": str(data.away_red_cards or 0),
         "url": data.match_url or "",
+        "h1_url": data.h1_url or "",
+        "h2_url": data.h2_url or "",
+        "quick_events_url": data.quick_events_url or "",
+        "video": _video_str(data.video),
         "status": status,
         "freeze_time": str(state.freeze_time),
         "risk": str(state.risk),

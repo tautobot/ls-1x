@@ -24,8 +24,8 @@ _target = os.environ.get('JSON_DB_PATH', '')
 if '://' in _target or _target.startswith('http'):
     sys.exit(f'REFUSING to run: JSON_DB_PATH looks remote: {_target!r}')
 
-from horus.json_server import JsonServerProcessor  # noqa: E402
-from horus.enums import MatchStatus  # noqa: E402
+from livescore.json_server import JsonServerProcessor  # noqa: E402
+from livescore.enums import MatchStatus  # noqa: E402
 
 SOURCE = '1x'
 
@@ -35,7 +35,7 @@ SEED_PREFIX = '9900'
 
 
 def _mk(i, risk, status=None, **extra):
-    # SHAPE FIDELITY: every value must match what horus/json_sync/converter.py emits,
+    # SHAPE FIDELITY: every value must match what livescore/json_sync/converter.py emits,
     # because app.py sorts on / string-compares these fields. In particular:
     #   * `half`  -> str (converter emits str(half)); an int here would (a) crash
     #     utils.sort_json's itemgetter('half',...) if seed & sync data ever mix, and

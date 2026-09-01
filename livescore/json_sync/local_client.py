@@ -4,16 +4,16 @@ import asyncio
 
 import structlog
 
-from horus import jsondb
+from livescore import jsondb
 
 logger = structlog.get_logger(service="json_sync.local_client")
 
 
 class JsonLocalClient:
-    """In-process adapter over ``horus.jsondb`` that matches the async interface
+    """In-process adapter over ``livescore.jsondb`` that matches the async interface
     ``JsonSyncService`` expects (previously satisfied by an HTTP ``JsonServerClient``).
 
-    ``horus.jsondb`` operations are synchronous and guarded by a cross-process file
+    ``livescore.jsondb`` operations are synchronous and guarded by a cross-process file
     lock (``filelock``). Every call is offloaded to a worker thread via
     ``asyncio.to_thread`` so the sync event loop is never blocked on the lock / file
     I/O. Concurrent in-process callers still serialize correctly through the OS-level

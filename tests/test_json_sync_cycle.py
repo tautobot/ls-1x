@@ -23,18 +23,18 @@ import sys
 import asyncio
 import tempfile
 
-# Isolate the store BEFORE importing horus modules.
+# Isolate the store BEFORE importing livescore modules.
 _TMPDIR = tempfile.mkdtemp(prefix="qa_sync_cycle_")
 DB = os.path.join(_TMPDIR, "db.json")
 os.environ["JSON_DB_PATH"] = DB
 
-from horus import jsondb  # noqa: E402
+from livescore import jsondb  # noqa: E402
 jsondb.JSON_DB_PATH = DB
-from horus.models import MatchData  # noqa: E402
-from horus.providers.base import BaseProvider  # noqa: E402
-from horus.json_sync.local_client import JsonLocalClient  # noqa: E402
-from horus.json_sync.service import JsonSyncService  # noqa: E402
-from horus.json_sync.converter import MatchState, match_data_to_json, update_risk  # noqa: E402
+from livescore.models import MatchData  # noqa: E402
+from livescore.providers.base import BaseProvider  # noqa: E402
+from livescore.json_sync.local_client import JsonLocalClient  # noqa: E402
+from livescore.json_sync.service import JsonSyncService  # noqa: E402
+from livescore.json_sync.converter import MatchState, match_data_to_json, update_risk  # noqa: E402
 
 SOURCE = "1x"
 

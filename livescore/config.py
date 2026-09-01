@@ -4,7 +4,7 @@ import sys
 import json
 import logging
 import pytz
-from horus.custom_logger import CustomFormatter
+from livescore.custom_logger import CustomFormatter
 from dotenv import load_dotenv
 
 

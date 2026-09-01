@@ -5,7 +5,7 @@ launch ``sync_matches.py`` as a separate systemd service alongside it, so on Clo
 nothing would ever populate ``db.json`` and the match table stays empty.
 
 ``ensure_sync_running()`` starts the same finder+updater loops
-(``horus.json_sync.runner.main``) in a daemon background thread, exactly once per
+(``livescore.json_sync.runner.main``) in a daemon background thread, exactly once per
 server process. Call it from the app on every rerun — it is idempotent and
 process-global, so repeated calls (and multiple viewer sessions) all share the one
 sync thread.
@@ -25,10 +25,10 @@ import structlog
 # Import the whole sync chain EAGERLY, in the main thread, at module import time
 # (streamlit_app.py imports this module during its first run). If these imports
 # were done lazily inside the background thread, they could race with Streamlit's
-# rerun re-imports of overlapping `horus.*` modules and raise
-# `KeyError: 'horus.json_server'` mid-import. Loading everything once up front on
-# the main thread makes every later `from horus... import` a safe dict lookup.
-from horus.json_sync.runner import main as _sync_main  # noqa: E402
+# rerun re-imports of overlapping `livescore.*` modules and raise
+# `KeyError: 'livescore.json_server'` mid-import. Loading everything once up front on
+# the main thread makes every later `from livescore... import` a safe dict lookup.
+from livescore.json_sync.runner import main as _sync_main  # noqa: E402
 
 _log = structlog.get_logger(service="json_sync.embedded")
 _started = False

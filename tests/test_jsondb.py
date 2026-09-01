@@ -1,5 +1,5 @@
 """
-Regression suite for the file-backed JSON store (horus/jsondb.py + horus/json_server.py).
+Regression suite for the file-backed JSON store (livescore/jsondb.py + livescore/json_server.py).
 
 Runs standalone (no pytest required), matching this repo's plain-script convention:
 
@@ -20,14 +20,14 @@ import subprocess
 import textwrap
 import collections
 
-# --- Isolate: point the store at a temp file BEFORE importing horus modules. ---
+# --- Isolate: point the store at a temp file BEFORE importing livescore modules. ---
 _TMPDIR = tempfile.mkdtemp(prefix="qa_jsondb_")
 DB = os.path.join(_TMPDIR, "db.json")
 os.environ["JSON_DB_PATH"] = DB
 
-from horus import jsondb  # noqa: E402
+from livescore import jsondb  # noqa: E402
 jsondb.JSON_DB_PATH = DB  # what JsonServerProcessor's un-pathed calls default to
-from horus.json_server import (  # noqa: E402
+from livescore.json_server import (  # noqa: E402
     JsonServerProcessor,
     parse_filters,
     make_predicate,
@@ -279,9 +279,9 @@ def test_concurrency():
     worker_src = textwrap.dedent("""
         import os, sys
         os.environ['JSON_DB_PATH'] = sys.argv[1]
-        from horus import jsondb
+        from livescore import jsondb
         jsondb.JSON_DB_PATH = sys.argv[1]
-        from horus.json_server import JsonServerProcessor
+        from livescore.json_server import JsonServerProcessor
         w = int(sys.argv[2]); n = int(sys.argv[3])
         for i in range(n):
             JsonServerProcessor(source='1x', params={'risk': str(w), 'w': w}).post_match()

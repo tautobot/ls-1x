@@ -8,7 +8,7 @@ Introduce streamlit app
 
 Match data is stored in a local, in-process JSON file (`db.json` at the repo root) —
 there is **no external JSON server** and no network dependency. The store is read and
-written directly by `horus/json_server.py` (via `horus/jsondb.py`), which emulates the
+written directly by `livescore/json_server.py` (via `livescore/jsondb.py`), which emulates the
 json-server query/id semantics the app relies on.
 
 - The file is auto-created (seeded as `{"1x": [], "8x": []}`) on first use if missing.
@@ -25,14 +25,14 @@ completely alone, with **no external json-server and no separate sync container*
 poetry run python sync_matches.py
 ```
 
-What it does (`horus/json_sync/`):
+What it does (`livescore/json_sync/`):
 
 - **Fetches** live football matches from the bookmaker providers (`1xbet`, `8xbet`)
-  over HTTP (`horus/providers/`). The providers need no secrets — only base URLs.
+  over HTTP (`livescore/providers/`). The providers need no secrets — only base URLs.
 - **Converts** each match to the exact autobet JSON shape the Streamlit app renders
-  (`horus/json_sync/converter.py`) — all values as strings, keyed on the `id` field.
-- **Writes** directly into the in-process store (`horus/jsondb.py`) via an async
-  in-process client (`horus/json_sync/local_client.py`), with upsert on POST and
+  (`livescore/json_sync/converter.py`) — all values as strings, keyed on the `id` field.
+- **Writes** directly into the in-process store (`livescore/jsondb.py`) via an async
+  in-process client (`livescore/json_sync/local_client.py`), with upsert on POST and
   idempotent DELETE.
 - A **finder loop** discovers new live matches; an **updater loop** updates them and
   robustly deletes ended matches (freeze-time / wall-clock / orphan detection). Both
@@ -73,7 +73,7 @@ if a provider host changes:
 The same finder+updater loops can run either way; pick per host:
 
 1. **In-process (default, `EMBEDDED_SYNC=1`)** — the Streamlit app starts the sync in a
-   daemon background thread on first load (`horus/json_sync/embedded.py`, wired into
+   daemon background thread on first load (`livescore/json_sync/embedded.py`, wired into
    `app.py`), once per server process and supervised (auto-restarts if it ever exits).
    **This is what makes the app work on Streamlit Community Cloud**, which runs only
    `streamlit run` and cannot host a separate service. No extra config or secrets are

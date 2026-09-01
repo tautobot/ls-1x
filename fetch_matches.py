@@ -1,12 +1,12 @@
-# DEPRECATED: superseded by sync_matches.py (horus/json_sync).
+# DEPRECATED: superseded by sync_matches.py (livescore/json_sync).
 # The legacy fetch loop wrote to tmp/matches.json via a stale remote json-server
 # endpoint that nothing reads anymore. The new in-process sync service
 # (sync_matches.py) discovers live matches AND deletes ended ones, writing
-# directly into horus/jsondb.py's db.json. This file is retained for reference
+# directly into livescore/jsondb.py's db.json. This file is retained for reference
 # only and is no longer wired into deployment (systemds/ / devops/deploy.sh).
 import schedule
 import time
-from horus.utils import fetch_matches_data
+from livescore.utils import fetch_matches_data
 
 if __name__ == "__main__":
 

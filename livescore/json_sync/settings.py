@@ -10,9 +10,9 @@ class SyncSettings(BaseSettings):
     """Trimmed settings for the live-match sync subsystem.
 
     Ported (and trimmed) from agent.livescore's ``src/config.py`` — DB/redis/betor
-    fields dropped. Kept deliberately separate from ``horus/config.py`` so the sync
-    subsystem never entangles with the legacy fetch code (``horus/apis.py``,
-    ``horus/utils.py``).
+    fields dropped. Kept deliberately separate from ``livescore/config.py`` so the sync
+    subsystem never entangles with the legacy fetch code (``livescore/apis.py``,
+    ``livescore/utils.py``).
 
     Env var names are prefixed ``SYNC_`` to avoid colliding with ls-1x's *legacy*
     ``X8_BASE_URL`` / ``X8_DOMAIN`` (already defined in ``.env`` and consumed by the

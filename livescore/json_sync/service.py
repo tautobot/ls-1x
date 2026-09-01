@@ -5,7 +5,7 @@ import time
 
 import structlog
 
-from horus.json_sync.converter import (
+from livescore.json_sync.converter import (
     MatchState,
     capture_halftime,
     detect_goals,
@@ -13,9 +13,9 @@ from horus.json_sync.converter import (
     update_prediction,
     update_risk,
 )
-from horus.json_sync.local_client import JsonLocalClient
-from horus.models import MatchData
-from horus.providers.base import BaseProvider
+from livescore.json_sync.local_client import JsonLocalClient
+from livescore.models import MatchData
+from livescore.providers.base import BaseProvider
 
 logger = structlog.get_logger(service="json_sync")
 
@@ -321,6 +321,14 @@ class JsonSyncService:
 
                     # Provider responded: reset null-data counter
                     self._null_data_counts.pop(source_match_id, None)
+
+                    # Carry sticky link/video fields forward when a detail
+                    # response omits them (mirrors autobet preserving
+                    # quick_events_url/h1_url/h2_url across compare cycles), so
+                    # the QE Link doesn't flicker once the sub-game is known.
+                    for _f in ("h1_url", "h2_url", "quick_events_url", "video"):
+                        if not getattr(data, _f, None) and getattr(prev_data, _f, None):
+                            object.__setattr__(data, _f, getattr(prev_data, _f))
 
                     ts = data.time_seconds or 0
                     prev_ts = prev_data.time_seconds or 0

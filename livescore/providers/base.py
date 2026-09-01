@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from horus.models import MatchData
+from livescore.models import MatchData
 
 
 class BaseProvider(ABC):

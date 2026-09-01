@@ -1,4 +1,4 @@
-# DEPRECATED: superseded by sync_matches.py (horus/json_sync).
+# DEPRECATED: superseded by sync_matches.py (livescore/json_sync).
 # Ended-match cleanup is now handled internally by JsonSyncService's updater loop
 # (freeze-time / wall-clock / orphan detection), so a separate cleanup service is
 # no longer needed. This file is retained for reference only and is no longer
@@ -6,7 +6,7 @@
 import schedule
 import time
 import asyncio
-from horus.utils import delete_ended_matches
+from livescore.utils import delete_ended_matches
 
 if __name__ == "__main__":
 

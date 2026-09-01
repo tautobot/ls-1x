@@ -2,7 +2,7 @@ import requests
 import json
 import http.client
 import time
-from horus.config import logger, \
+from livescore.config import logger, \
     X8_DOMAIN, \
     X8_BASE_URL, \
     X8_COOKIE, \

@@ -1,5 +1,5 @@
 """
-Unit suite for the in-process JSON store client (horus/json_sync/local_client.py).
+Unit suite for the in-process JSON store client (livescore/json_sync/local_client.py).
 
 Runs standalone (no pytest required), matching this repo's plain-script convention:
 
@@ -19,14 +19,14 @@ import sys
 import asyncio
 import tempfile
 
-# Isolate: point the store at a temp file BEFORE importing horus modules.
+# Isolate: point the store at a temp file BEFORE importing livescore modules.
 _TMPDIR = tempfile.mkdtemp(prefix="qa_local_client_")
 DB = os.path.join(_TMPDIR, "db.json")
 os.environ["JSON_DB_PATH"] = DB
 
-from horus import jsondb  # noqa: E402
+from livescore import jsondb  # noqa: E402
 jsondb.JSON_DB_PATH = DB
-from horus.json_sync.local_client import JsonLocalClient  # noqa: E402
+from livescore.json_sync.local_client import JsonLocalClient  # noqa: E402
 
 SOURCE = "1x"
 

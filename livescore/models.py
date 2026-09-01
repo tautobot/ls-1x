@@ -82,6 +82,14 @@ class MatchData(BaseModel):
     quick_markets: dict[str, Any] | None = None
     # Match URL (link to bookmaker match page)
     match_url: str | None = None
+    # Sub-game links derived from the 1xBet SG/"halfs" array (autobet parity):
+    #   h1_url / h2_url        — bookmaker page for each half's sub-game
+    #   quick_events_url ("QE Link") — page for the "Quick events" sub-game
+    h1_url: str | None = None
+    h2_url: str | None = None
+    quick_events_url: str | None = None
+    # Live-video availability flag (1xBet "VA" field), carried through verbatim.
+    video: Any = None
     # Raw
     events: list[dict[str, Any]] = Field(default_factory=list)
     raw: dict[str, Any] = Field(default_factory=dict)

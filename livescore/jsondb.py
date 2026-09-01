@@ -3,14 +3,14 @@ import json
 import tempfile
 import threading
 from filelock import FileLock
-from horus.config import logger, JSON_DB_PATH
+from livescore.config import logger, JSON_DB_PATH
 
 COLLECTIONS = ('1x', '8x')
 LOCK_TIMEOUT = 10
 
 # Process-local mutex around every read-modify-write. The FileLock below handles
 # CROSS-process safety, but when the sync loops run in a background thread inside
-# the Streamlit process (see horus.json_sync.embedded), several writer threads (the
+# the Streamlit process (see livescore.json_sync.embedded), several writer threads (the
 # updater offloads jsondb calls via asyncio.to_thread) plus the Streamlit reader
 # share one process — and same-process fcntl locks don't reliably exclude each
 # other. This RLock guarantees intra-process serialization regardless. Always

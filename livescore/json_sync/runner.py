@@ -5,10 +5,10 @@ import os
 
 import httpx
 
-from horus.json_sync.local_client import JsonLocalClient
-from horus.json_sync.service import JsonSyncService
-from horus.json_sync.settings import configure_logging, settings
-from horus.providers import build_providers
+from livescore.json_sync.local_client import JsonLocalClient
+from livescore.json_sync.service import JsonSyncService
+from livescore.json_sync.settings import configure_logging, settings
+from livescore.providers import build_providers
 
 # The store collection the sync service writes into. The service stores ALL
 # providers' matches into this single collection (as agent.livescore did).
@@ -21,7 +21,7 @@ async def main() -> None:
     """Composition root for the live-match sync service.
 
     Builds the bookmaker providers (which still fetch over real HTTP), the
-    in-process JSON store client (writes into ``horus.jsondb``), and the sync
+    in-process JSON store client (writes into ``livescore.jsondb``), and the sync
     service, then runs the finder + updater loops forever. Only the *providers*
     talk to the network now — the store leg is fully in-process.
     """
@@ -36,7 +36,7 @@ async def main() -> None:
         proxy=settings.http_proxy or None,
     )
     providers = build_providers(settings, http_client)
-    # db_path=None -> uses horus.jsondb's JSON_DB_PATH default (<repo>/db.json)
+    # db_path=None -> uses livescore.jsondb's JSON_DB_PATH default (<repo>/db.json)
     json_client = JsonLocalClient()
 
     service = JsonSyncService(
