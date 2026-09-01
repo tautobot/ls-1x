@@ -1,4 +1,5 @@
 import time
+import base64
 import requests
 import pandas as pd
 import streamlit as st
@@ -116,7 +117,7 @@ def page_load():
         ),
         "id": st.column_config.Column(
             label="ID",
-            width="small"
+            width=50
         ),
         "league": st.column_config.Column(
             label="League",
@@ -138,10 +139,20 @@ def page_load():
             label="H1 Score",
             width=50
         ),
+        "rc1": st.column_config.ImageColumn(
+            label="",
+            width=28
+        ),
         "score": st.column_config.TextColumn(
             label="Score",
             width=50
         ),
+        "rc2": st.column_config.ImageColumn(
+            label="",
+            width=28
+        ),
+        # Raw "X - Y" score kept for highlight_rows' colour logic; hidden from view.
+        "score_val": None,
         "time_match": st.column_config.Column(
             label="Time",
             width=70
@@ -208,6 +219,10 @@ def page_load():
             label="Scored",
             width=80
         ),
+        "rc_times": st.column_config.Column(
+            label="RCs",
+            width=80
+        ),
         "url": st.column_config.LinkColumn(
             label="Link",
             display_text="Link",
@@ -239,6 +254,41 @@ def paginate_dataframe(dataframe, page_size, page_num):
     return dataframe[offset:offset + page_size]
 
 
+def _redcards_count(value) -> int:
+    """Coerce a stored red-card value (str/int/NaN/None) to a non-negative int."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        n = 0
+    return n if n > 0 else 0
+
+
+def _redcard_dots_uri(value) -> str:
+    """Small red dots as a data-URI SVG — one dot per red card, '' when none.
+    Shown in a narrow ImageColumn beside the score; a tall-ish viewBox keeps each
+    dot small once ImageColumn scales the image up to the row height."""
+    n = _redcards_count(value)
+    if n <= 0:
+        return ""
+    H = 22.0
+    cy = H / 2
+    r = 4.5            # small dot radius (relative to the 22-tall viewBox)
+    gap = 2.5
+    pad = 2.0
+    d = 2 * r
+    W = pad * 2 + n * d + (n - 1) * gap
+    dots = "".join(
+        f'<circle cx="{pad + r + i * (d + gap):.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="#d40000"/>'
+        for i in range(n)
+    )
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" height="{H:.0f}" '
+        f'viewBox="0 0 {W:.0f} {H:.0f}">{dots}</svg>'
+    )
+    b64 = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+    return f"data:image/svg+xml;base64,{b64}"
+
+
 def covert_json_to_dataframe(j_data):
     df = pd.DataFrame(
         data=j_data,
@@ -264,6 +314,7 @@ def covert_json_to_dataframe(j_data):
             "team2_attacks",
             "team2_d_attacks",
             "scores",
+            "rc_times",
             "status",
             "url",
             "h1_url",
@@ -271,14 +322,39 @@ def covert_json_to_dataframe(j_data):
             "freeze_time",
             "h1_scores",
             "h2_scores",
-            "risk"
+            "risk",
+            # Red-card counts — used only to decorate the score columns below,
+            # then dropped so they never render as their own columns.
+            "team1_redcard",
+            "team2_redcard",
         )
     )
-    # Add selected column with default False
-    df['selected'] = False
-    # Reorder columns to put selected first
+    # Missing H1 scores (pre-halftime) render blank, not the literal "None".
+    df["h1_score"] = df["h1_score"].fillna("")
+    # Score stays plain text (so it keeps its row colour and is selectable). Red
+    # cards render as small red dots in narrow image columns flanking Score —
+    # team1 (rc1) on the left, team2 (rc2) on the right. `score_val` mirrors the
+    # raw score for highlight_rows.
+    if not df.empty:
+        df["score_val"] = df["score"]
+        df["rc1"] = df["team1_redcard"].apply(_redcard_dots_uri)
+        df["rc2"] = df["team2_redcard"].apply(_redcard_dots_uri)
+    else:
+        df["score_val"] = pd.Series(dtype=object)
+        df["rc1"] = pd.Series(dtype=object)
+        df["rc2"] = pd.Series(dtype=object)
+    df = df.drop(columns=["team1_redcard", "team2_redcard"])
+    # Place the red-card dot columns immediately left/right of Score.
     cols = df.columns.tolist()
-    cols = ['selected'] + [col for col in cols if col != 'selected']
+    for c in ("rc1", "rc2"):
+        cols.remove(c)
+    si = cols.index("score")
+    cols.insert(si, "rc1")
+    cols.insert(si + 2, "rc2")
+    df = df[cols]
+    # Add selected column and put it first.
+    df['selected'] = False
+    cols = ['selected'] + [c for c in df.columns.tolist() if c != 'selected']
     df = df[cols]
     return df
 
@@ -437,11 +513,11 @@ def main():
                     if (
                             (
                                 float(row.prediction) <= 2.5 and
-                                row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
+                                row.score_val in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
                             ) or 
                             (
                                 float(row.prediction) <= 3 and
-                                row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
+                                row.score_val in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
                             )
                         ):
                         if (
@@ -455,7 +531,7 @@ def main():
                 elif row.half == '2':
                     if (
                         float(row.prediction) <= 3 and
-                        row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
+                        row.score_val in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
                     ):
                         if (
                             ':' in str(row.h2_scores) and
@@ -575,11 +651,11 @@ def main():
                         if (
                                 (
                                     float(row.prediction) <= 2.5 and
-                                    row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
+                                    row.score_val in ('0 - 0', '0 - 1', '1 - 0', '1 - 1')
                                 ) or 
                                 (
                                     float(row.prediction) <= 3 and
-                                    row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
+                                    row.score_val in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '0 - 2', '2 - 0')
                                 )
                             ):
                             if (
@@ -591,7 +667,7 @@ def main():
                     elif row.half == '2':
                         if (
                             float(row.prediction) <= 3 and
-                            row.score in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
+                            row.score_val in ('0 - 0', '0 - 1', '1 - 0', '1 - 1', '2 - 1', '1 - 2', '2 - 0', '0 - 2')
                         ):
                             if (
                                 ':' in str(row.h2_scores) and

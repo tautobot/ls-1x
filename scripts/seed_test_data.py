@@ -60,7 +60,18 @@ def _mk(i, risk, status=None, **extra):
         # them and the risk-based / green / orange coloring paths become exercisable.
         'team1_shots': extra.pop('team1_shots', f'{i % 3} + {i % 4}'),
         'team2_shots': extra.pop('team2_shots', f'{(i + 1) % 3} + {(i + 2) % 4}'),
+        # Red cards (converter emits these as strings, default "0"). Sprinkled so a
+        # subset of rows exercise the red-card ball badges on the Score column.
+        'team1_redcard': extra.pop('team1_redcard', str(1 if i % 6 == 0 else 0)),
+        'team2_redcard': extra.pop('team2_redcard', str(2 if i % 9 == 0 else 0)),
     }
+    # Red-card times (converter emits `rc_times` like `scores`): one clock entry
+    # per red card shown, newest first — so the RCs column has data to render.
+    rc_total = int(rec['team1_redcard']) + int(rec['team2_redcard'])
+    if rc_total:
+        rec['rc_times'] = ', '.join(
+            f'{max(1, 75 - k * 12):02d}:{(k * 7) % 60:02d}' for k in range(rc_total)
+        )
     if status is not None:
         rec['status'] = status
     rec.update(extra)
@@ -96,6 +107,21 @@ def build_records():
     i += 1
     records.append(_mk(i, '-1', MatchStatus.ON_GOING_H2,
                        team1='X' * 200))  # max-length-ish string
+    i += 1
+    # Red-card badge coverage: team1-only, team2-only, and both (with an H1 score
+    # so the H1 Score badge column is exercised too).
+    records.append(_mk(i, '-1', MatchStatus.ON_GOING_H2,
+                       team1='RedCard T1', team2='Clean',
+                       score='2 - 1', team1_redcard='1', team2_redcard='0'))
+    i += 1
+    records.append(_mk(i, '0', MatchStatus.ON_GOING_H1,
+                       team1='Clean', team2='RedCard T2',
+                       score='0 - 3', team1_redcard='0', team2_redcard='2'))
+    i += 1
+    records.append(_mk(i, '-2', MatchStatus.ON_GOING_H2,
+                       team1='Both', team2='Reds',
+                       score='1 - 1', h1_score='1 - 0',
+                       team1_redcard='1', team2_redcard='2'))
     i += 1
     return records
 

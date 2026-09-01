@@ -81,6 +81,7 @@ class MatchState:
     scores: str = ""              # all goal times, e.g. "82:23, 27:16"
     h1_scores: str = ""           # goal times in first half
     h2_scores: str = ""           # goal times in second half
+    rc_times: str = ""            # all red-card times, e.g. "67:12, 43:05"
     h1_team1_score: str = ""      # home score at halftime
     h1_team2_score: str = ""      # away score at halftime
     h1_score: str = ""            # formatted "X - Y" at halftime
@@ -112,6 +113,30 @@ def detect_goals(
         state.h1_scores = f"{time_match}, {state.h1_scores}" if state.h1_scores else time_match
     elif half == 2:
         state.h2_scores = f"{time_match}, {state.h2_scores}" if state.h2_scores else time_match
+
+
+def detect_red_cards(
+    prev: MatchData | None,
+    curr: MatchData,
+    state: MatchState,
+) -> None:
+    """Record the match clock each time the combined red-card count rises.
+
+    Mirrors ``detect_goals`` — red cards only ever increase, so a jump in the
+    home+away total means a card was just shown; prepend its time (newest first,
+    same "MM:SS, MM:SS" format as ``scores``). One entry per detected increase.
+    """
+    if prev is None:
+        return
+
+    prev_total = (prev.home_red_cards or 0) + (prev.away_red_cards or 0)
+    curr_total = (curr.home_red_cards or 0) + (curr.away_red_cards or 0)
+
+    if curr_total <= prev_total:
+        return
+
+    time_match = _time_match_str(curr.time_seconds)
+    state.rc_times = f"{time_match}, {state.rc_times}" if state.rc_times else time_match
 
 
 def capture_halftime(
@@ -263,6 +288,7 @@ def match_data_to_json(data: MatchData, state: MatchState) -> dict:
         "prediction": prediction,
         "cur_prediction": str(cur_prediction),
         "scores": state.scores,
+        "rc_times": state.rc_times,
         "score": score,
         "team1_redcard": str(data.home_red_cards or 0),
         "team2_redcard": str(data.away_red_cards or 0),

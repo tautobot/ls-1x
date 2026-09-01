@@ -9,6 +9,7 @@ from livescore.json_sync.converter import (
     MatchState,
     capture_halftime,
     detect_goals,
+    detect_red_cards,
     match_data_to_json,
     update_prediction,
     update_risk,
@@ -379,6 +380,7 @@ class JsonSyncService:
 
                     # Update accumulated state
                     detect_goals(prev_data, data, state)
+                    detect_red_cards(prev_data, data, state)
                     capture_halftime(prev_data, data, state)
                     update_prediction(data, state)
                     update_risk(data, state)
