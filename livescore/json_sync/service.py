@@ -163,6 +163,19 @@ class JsonSyncService:
                         "not_started": "not_started"}.get(status, "h1"),
                 time_seconds=int(m.get("time_second") or 0),
                 total_prediction=float(m.get("cur_prediction") or 0) or None,
+                # Restore the sticky bookmaker links from the stored record.
+                # These are derived from the intermittently-offered "Quick events"
+                # / half sub-games (the SG array), so a given detail fetch often
+                # lacks them; the updater's carry-forward (see _update_one) keeps
+                # them stable — but ONLY if prev_data carries them. Without this,
+                # every sync restart (frequent on Streamlit Cloud) wiped them to
+                # None, so the QE/H1/H2 links flickered (blank on any cycle whose
+                # detail response omitted the sub-game, restored on the next).
+                match_url=m.get("url") or None,
+                h1_url=m.get("h1_url") or None,
+                h2_url=m.get("h2_url") or None,
+                quick_events_url=m.get("quick_events_url") or None,
+                video=m.get("video") or None,
             )
             # Restore accumulated state from existing server data
             state = MatchState(

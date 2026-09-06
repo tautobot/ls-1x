@@ -296,6 +296,37 @@ async def test_bootstrap_restores_rc_times():
               "bootstrap restored `rc_times` (was previously dropped)")
 
 
+async def test_bootstrap_restores_qe_links():
+    """A match in the store with QE/H1 links must keep them on the reconstructed
+    MatchData after a sync restart, so the updater's sticky carry-forward can hold
+    them even when a detail fetch lands between intermittent "Quick events"
+    windows. Regression for the QE Link flickering (appearing/disappearing) on
+    Streamlit Cloud, where frequent in-process restarts wiped the in-memory links
+    to None, blanking the stored link on the next SG-less detail cycle.
+    """
+    _fresh_db()
+    from livescore.json_sync.converter import match_data_to_json
+    seeded = _md("778", status="h2", ts=3300, home=1, away=0, pred=2.5)
+    object.__setattr__(seeded, "quick_events_url", "https://x/qe/778")
+    object.__setattr__(seeded, "h1_url", "https://x/h1/778")
+    json_data = match_data_to_json(seeded, MatchState(prediction="2.5"))
+    client = JsonLocalClient(db_path=DB)
+    await client.post_match(SOURCE, json_data)
+
+    svc = JsonSyncService(
+        providers=[FakeProvider()], json_client=client, source=SOURCE,
+        finder_interval=0.05, updater_interval=0.05,
+    )
+    await svc._bootstrap_from_server()
+
+    md = svc._live_matches.get("778")
+    check(md is not None, "match reconstructed on bootstrap")
+    if md:
+        check(md.quick_events_url == "https://x/qe/778",
+              "bootstrap restored quick_events_url (fixes QE Link flicker on restart)")
+        check(md.h1_url == "https://x/h1/778", "bootstrap restored h1_url")
+
+
 async def test_fetch_match_detail_requests_subgames():
     """The detail URL MUST send isSubGames=true, or the feed omits the SG array
     and the H1/H2/QE links are always empty. Regression guard for that URL param.
@@ -454,6 +485,7 @@ async def _run():
         test_updater_deletes_on_ended_transition,
         test_updater_records_red_card_time,
         test_bootstrap_restores_rc_times,
+        test_bootstrap_restores_qe_links,
         test_fetch_match_detail_requests_subgames,
         test_parse_entry_extracts_subgame_links,
         test_run_fails_fast_on_loop_crash,
