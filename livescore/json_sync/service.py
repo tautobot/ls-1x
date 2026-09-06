@@ -171,6 +171,13 @@ class JsonSyncService:
                 scores=str(m.get("scores", "")),
                 h1_scores=str(m.get("h1_scores", "")),
                 h2_scores=str(m.get("h2_scores", "")),
+                # Restore accumulated red-card times too. Without this, a
+                # sync-service restart (frequent on Streamlit Cloud, where the
+                # whole thing runs in-process) drops rc_times while `scores`
+                # survives — so the RCs column would vanish for a match that
+                # had a red card before the restart even though its "Scored"
+                # column persists. Mirror `scores` exactly.
+                rc_times=str(m.get("rc_times", "")),
                 h1_team1_score=str(m.get("h1_team1_score", "")),
                 h1_team2_score=str(m.get("h1_team2_score", "")),
                 h1_score=str(m.get("h1_score", "")),

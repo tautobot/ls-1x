@@ -72,6 +72,20 @@ def _mk(i, risk, status=None, **extra):
         rec['rc_times'] = ', '.join(
             f'{max(1, 75 - k * 12):02d}:{(k * 7) % 60:02d}' for k in range(rc_total)
         )
+    # Sub-game links (converter emits `quick_events_url` / `h1_url` from the live
+    # feed's SG array). The live sync is what really populates these; we seed them
+    # here on a subset so the QE Link / H1 Link columns have something to render in
+    # a seeded (network-off) run. Realistic distribution: most rows have QE + H1
+    # links, but leave some blank (matches whose SG the feed didn't expose, or H2
+    # matches whose H1 sub-game is gone) so QA sees the empty state too.
+    _slug = str(rec['league']).lower().replace(' ', '-').replace('.', '')
+    _base = f'https://1xbet.mobi/en/live/football/{100000 + i}-{_slug}'
+    if i % 5 != 0:  # ~80% of rows get a QE link
+        rec.setdefault('quick_events_url', f'{_base}/{700000 + i * 3}')
+    if i % 3 != 0:  # ~66% get an H1 link (mimics H1/HT matches only)
+        rec.setdefault('h1_url', f'{_base}/{700001 + i * 3}')
+    if i % 4 != 0:  # most get an H2 link
+        rec.setdefault('h2_url', f'{_base}/{700002 + i * 3}')
     if status is not None:
         rec['status'] = status
     rec.update(extra)

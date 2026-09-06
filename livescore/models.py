@@ -93,3 +93,56 @@ class MatchData(BaseModel):
     # Raw
     events: list[dict[str, Any]] = Field(default_factory=list)
     raw: dict[str, Any] = Field(default_factory=dict)
+
+
+class GameEvent(BaseModel):
+    """One outcome/selection inside a MarketGroup (v3 gameEvents 'event').
+
+    Mirrors the raw event dict shape observed in the v3 ``gameEvents`` feed:
+    ``{"type": int, "parameter": float?, "cf": float, "cfView": str,
+    "eventParams": {"params": [...]}, "isCenter"?: bool, "blocked"?: bool}``.
+    """
+
+    type: int
+    parameter: float | None = None
+    cf: float
+    cf_view: str | None = None
+    params: list[str] = Field(default_factory=list)
+    is_center: bool = False
+    blocked: bool = False
+    player_id: int | None = None
+    player_name: str | None = None
+
+
+class MarketGroup(BaseModel):
+    """One betting market (a v3 ``eventGroups`` entry) for a match/subgame.
+
+    ``name`` is resolved from ``MARKET_GROUP_NAMES`` (the raw payload carries only
+    numeric ``groupId``). ``subgame_id``/``subgame_name`` identify which bettable
+    game the outcomes belong to (the match itself, the current-half subgame, the
+    "Quick events" subgame, etc.); both are ``None`` for top-level groups.
+    """
+
+    group_id: int
+    short_group_id: int | None = None
+    name: str | None = None
+    subgame_id: int | None = None
+    subgame_name: str | None = None
+    outcomes: list[GameEvent] = Field(default_factory=list)
+
+
+class MatchEvents(BaseModel):
+    """Per-match v3 ``gameEvents`` snapshot — the READ side for the betting UI.
+
+    ``all_markets`` is a flat list of every parsed group across the top-level
+    ``eventGroups`` and every ``subGamesForMainGame`` entry; prioritisation and
+    current-half selection happen downstream in ``prioritize_markets``.
+    """
+
+    match_id: str
+    main_game_id: str | None = None
+    current_period: int | None = None
+    current_period_name: str | None = None
+    full_score: str | None = None
+    all_markets: list[MarketGroup] = Field(default_factory=list)
+    fetched_at: float | None = None

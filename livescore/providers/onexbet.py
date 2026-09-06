@@ -14,6 +14,25 @@ logger = structlog.get_logger()
 
 ANTISPORTS = ",".join(str(i) for i in range(2, 79))
 
+# Shared browser-like request headers for 1xBet endpoints. Extracted from the
+# per-instance headers previously inlined in ``OneXBetProvider.__init__`` so the
+# synchronous betting client (``livescore/betting/sync_client.py``) can reuse the
+# exact same User-Agent/sec-ch-ua set without duplicating the string — single
+# source of truth. The ``referer`` stays per-instance/per-call because it depends
+# on ``base_url``.
+DEFAULT_HEADERS: dict[str, str] = {
+    "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    "sec-ch-ua-mobile": "?0",
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "content-type": "application/json",
+    "accept": "application/json, text/plain, */*",
+    "x-requested-with": "XMLHttpRequest",
+    "sec-ch-ua-platform": '"macOS"',
+}
+
 # Standings ID → field mapping
 STANDINGS_MAP: dict[int, tuple[str, str]] = {
     29: ("home_possession", "away_possession"),
@@ -155,19 +174,9 @@ class OneXBetProvider(BaseProvider):
         self._odds_cache: dict[str, dict[str, float | None]] = {}
         # Cache of sub-game IDs: {source_match_id: [h1_sub_id, h2_sub_id]}
         self._subgame_cache: dict[str, list[str]] = {}
-        self.headers = {
-            "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-            "sec-ch-ua-mobile": "?0",
-            "User-Agent": (
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-            ),
-            "content-type": "application/json",
-            "accept": "application/json, text/plain, */*",
-            "referer": f"{self.base_url}/en/live",
-            "x-requested-with": "XMLHttpRequest",
-            "sec-ch-ua-platform": '"macOS"',
-        }
+        # Reuse the shared header set; the ``referer`` is base_url-dependent so it
+        # stays per-instance.
+        self.headers = {**DEFAULT_HEADERS, "referer": f"{self.base_url}/en/live"}
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=4), reraise=True)
     async def _get(self, url: str) -> dict | None:
@@ -246,9 +255,18 @@ class OneXBetProvider(BaseProvider):
 
     async def fetch_match_detail(self, match_id: str) -> MatchData | None:
         try:
+            # ``isSubGames=true`` is what makes GetGameZip return the ``SG``
+            # ("halfs") array — the H1/H2 half sub-games and the "Quick events"
+            # sub-game whose ids build the H1/H2/QE links. Without it the feed
+            # omits ``SG`` entirely, so those links are always empty (autobet's
+            # working detail fetch always sends ``isSubGames=true&GroupEvents=true``).
+            # We keep ls-1x's existing ``topGroups=96,...`` so the G=96
+            # goal-up-to-minute quick_markets keep parsing — autobet's URL drops
+            # that group, but we don't need to give it up to gain SG.
             url = (
                 f"{self.base_url}/service-api/LiveFeed/GetGameZip"
                 f"?id={match_id}&lng=en&cfview=0&is498=true&from498=true"
+                f"&isSubGames=true&GroupEvents=true"
                 f"&topGroups=96,27,14,136,303,307,309,7961,275"
             )
             data = await self._get(url)
@@ -261,6 +279,23 @@ class OneXBetProvider(BaseProvider):
         except Exception:
             logger.exception("x1_fetch_detail_error", match_id=match_id)
             return None
+
+    async def fetch_game_events(self, match_id: str, count_events: int = 250) -> dict | None:
+        """Fetch the v3 ``gameEvents`` feed for a single match (per-match markets).
+
+        READ-ONLY, no auth required — the v3 feed returns 200 with no
+        cookies/x-hd (see scratchpad/v3_findings.md). Returns the raw response
+        dict (``id``, ``scores``, ``eventGroups``, ``subGamesForMainGame``,
+        ``marketEventsCount``, ...) or ``None`` on failure/block. Parsing into
+        ``MatchEvents`` is done separately by
+        ``livescore.providers.onexbet_events.parse_game_events``.
+        """
+        url = (
+            f"{self.base_url}/service-api/main-live-feed/v3/gameEvents"
+            f"?cfView=3&countEvents={count_events}&country=43&fcountry=43"
+            f"&gameId={match_id}&gr=819&grMode=4&lng=en&marketType=1&ref=1"
+        )
+        return await self._get(url)
 
     def _parse_entry(self, raw: dict) -> MatchData | None:
         # Extract fields via dot-path

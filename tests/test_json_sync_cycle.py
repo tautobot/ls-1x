@@ -219,6 +219,148 @@ async def test_updater_updates_live_record():
         check(rec.get("score") == "1 - 0", "updater reflected the new score '1 - 0'")
 
 
+async def test_updater_records_red_card_time():
+    """A red card shown DURING tracking must land in the RCs column.
+
+    Regression for the "RCs sometimes shows, sometimes doesn't" report: the
+    updater's detect_red_cards() must append the match clock to rc_times when
+    the combined red-card count rises, and the converter must emit it under the
+    'rc_times' key app.py reads. (Cards that predate first-tracking are NOT
+    timed — faithful to autobet, which only records deltas — so we assert the
+    delta path, which is the one the app can actually populate.)
+    """
+    _fresh_db()
+    provider = FakeProvider()
+    # First seen with NO red cards.
+    provider.set_live([_md("777", status="h2", ts=3000, home=1, away=0, pred=2.5)])
+    svc = JsonSyncService(
+        providers=[provider],
+        json_client=JsonLocalClient(db_path=DB),
+        source=SOURCE,
+        finder_interval=0.05,
+        updater_interval=0.05,
+    )
+    await svc._bootstrap_from_server()
+    await _one_cycle(svc._match_finder)
+
+    rec0 = jsondb.get_collection(SOURCE, DB)[0]
+    check(rec0.get("rc_times", "") == "", "no rc_times before any red card is shown")
+
+    # Detail now reports a red card for the home team at 55:00.
+    detail = _md("777", status="h2", ts=3300, home=1, away=0, pred=2.5)
+    object.__setattr__(detail, "home_red_cards", 1)
+    provider.set_detail("777", detail)
+    await _one_cycle(svc._match_updater)
+
+    rows = jsondb.get_collection(SOURCE, DB)
+    check(len(rows) == 1, "match still present after red card")
+    if rows:
+        rec = rows[0]
+        check(rec.get("rc_times") == "55:00",
+              "updater recorded the red-card clock into rc_times ('55:00')")
+        check(str(rec.get("team1_redcard")) == "1", "team1_redcard count reflected")
+    check(svc._match_states["777"].rc_times == "55:00",
+          "in-memory MatchState.rc_times accumulated the red-card time")
+
+
+async def test_bootstrap_restores_rc_times():
+    """A match already in the store with accumulated rc_times must keep it after
+    a sync-service restart. Regression for rc_times being dropped on bootstrap
+    while `scores` survived — which made the RCs column vanish on restart even
+    though the "Scored" column persisted (Streamlit Cloud restarts in-process).
+    """
+    _fresh_db()
+    # Simulate a record left by a previous process: live match with both a goal
+    # time (scores) AND a red-card time (rc_times) already accumulated.
+    seeded = _md("777", status="h2", ts=3300, home=1, away=0, pred=2.5)
+    from livescore.json_sync.converter import match_data_to_json  # local import for clarity
+    state = MatchState(scores="55:00", rc_times="60:00", prediction="2.5")
+    json_data = match_data_to_json(seeded, state)
+    client = JsonLocalClient(db_path=DB)
+    await client.post_match(SOURCE, json_data)
+
+    svc = JsonSyncService(
+        providers=[FakeProvider()],
+        json_client=client,
+        source=SOURCE,
+        finder_interval=0.05,
+        updater_interval=0.05,
+    )
+    await svc._bootstrap_from_server()
+
+    restored = svc._match_states.get("777")
+    check(restored is not None, "match state reconstructed on bootstrap")
+    if restored:
+        check(restored.scores == "55:00", "bootstrap restored `scores` (control)")
+        check(restored.rc_times == "60:00",
+              "bootstrap restored `rc_times` (was previously dropped)")
+
+
+async def test_fetch_match_detail_requests_subgames():
+    """The detail URL MUST send isSubGames=true, or the feed omits the SG array
+    and the H1/H2/QE links are always empty. Regression guard for that URL param.
+    We stub the network (_get) and assert the URL the provider builds.
+    """
+    import httpx
+    from livescore.providers.onexbet import OneXBetProvider
+    from livescore.json_sync.settings import settings as sync_settings
+
+    captured = {}
+
+    class _StubProvider(OneXBetProvider):
+        async def _get(self, url):
+            captured["url"] = url
+            return {"Value": {"I": 777}}  # minimal; parse will still run
+
+    async with httpx.AsyncClient() as client:
+        p = _StubProvider(client, sync_settings)
+        await p.fetch_match_detail("777")
+
+    url = captured.get("url", "")
+    check("isSubGames=true" in url,
+          "fetch_match_detail sends isSubGames=true (SG/halfs array present)")
+    check("GetGameZip" in url, "fetch_match_detail hits GetGameZip")
+    # Keep the goal-up-to-minute quick_markets group so G=96 still parses.
+    check("topGroups=96" in url, "fetch_match_detail keeps topGroups=96 (G=96 quick_markets)")
+
+
+async def test_parse_entry_extracts_subgame_links():
+    """Given an SG ("halfs") array like the real feed returns, _parse_entry must
+    populate quick_events_url / h1_url / h2_url. Locks the SG parsing conditions
+    (MG==match I, TG=='Quick events' for QE, empty/absent TG + P in {1,2} for halves)
+    against the actual field shapes captured from the live feed.
+    """
+    import httpx
+    from livescore.providers.onexbet import OneXBetProvider
+    from livescore.json_sync.settings import settings as sync_settings
+
+    # Shapes taken verbatim from a live GetGameZip?...&isSubGames=true response:
+    # MG is an int equal to the match I; half sub-games have TG="" and P in {1,2};
+    # the Quick events sub-game has TG="Quick events" and no P.
+    raw = {
+        "I": 750396144,
+        "LI": 118463,
+        "LE": "Argentina. Primera Division",
+        "SG": [
+            {"I": 750396159, "MG": 750396144, "P": 1, "TG": ""},   # H1 half
+            {"I": 750396160, "MG": 750396144, "P": 2, "TG": ""},   # H2 half
+            {"I": 750396283, "MG": 750396144, "TG": "Quick events"},  # QE
+            {"I": 750396999, "MG": 750396144, "TG": "Corners"},    # unrelated market
+        ],
+    }
+    async with httpx.AsyncClient() as client:
+        p = OneXBetProvider(client, sync_settings)
+        m = p._parse_entry(raw)
+    check(m is not None, "parse_entry returned a MatchData")
+    if m:
+        check(bool(m.h1_url) and m.h1_url.endswith("/750396159"),
+              "h1_url built from the P==1 half sub-game id")
+        check(bool(m.h2_url) and m.h2_url.endswith("/750396160"),
+              "h2_url built from the P==2 half sub-game id")
+        check(bool(m.quick_events_url) and m.quick_events_url.endswith("/750396283"),
+              "quick_events_url built from the 'Quick events' sub-game id")
+
+
 async def test_run_fails_fast_on_loop_crash():
     """run() must NOT hang if one loop dies: it cancels the sibling and re-raises
     so the process exits and systemd Restart=always relaunches a clean pair.
@@ -310,6 +452,10 @@ async def _run():
         test_converter_shape_matches_app_reads,
         test_updater_updates_live_record,
         test_updater_deletes_on_ended_transition,
+        test_updater_records_red_card_time,
+        test_bootstrap_restores_rc_times,
+        test_fetch_match_detail_requests_subgames,
+        test_parse_entry_extracts_subgame_links,
         test_run_fails_fast_on_loop_crash,
         test_update_risk_tiers,
     ]

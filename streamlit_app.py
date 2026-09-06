@@ -10,6 +10,18 @@ from operator import itemgetter
 from livescore.json_server import JsonServerProcessor
 from livescore.enums import MatchStatus
 from livescore.json_sync.embedded import ensure_sync_running
+from livescore.json_sync.settings import settings
+from livescore.providers.onexbet_events import (
+    parse_game_events,
+    prioritize_markets,
+    MARKET_GROUP_NAMES,
+    _interval_width,
+    _outcome_label,
+)
+from livescore.betting.sync_client import (
+    fetch_game_events_sync,
+    build_coupon_events,
+)
 from streamlit_autorefresh import st_autorefresh
 
 # Set page config as the first Streamlit command
@@ -81,7 +93,40 @@ def page_load():
     # Create text input boxes for "TOK" and "UID" in the sidebar
     tok = st.sidebar.text_input("TOK", "")
     uid = st.sidebar.text_input("UID", "")
-    
+
+    # --- 1xBet betting session inputs -------------------------------------
+    # Runtime-only credentials for the "Bet" tab. Persisted in st.session_state
+    # for the life of the browser session ONLY — never written to disk, never
+    # logged. (Phase 1 uses these for read + coupon PREVIEW; no bet is placed.)
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("1xBet Session (for betting)")
+    st.session_state["bet_cookies"] = st.sidebar.text_area(
+        "COOKIES (raw Cookie header)",
+        value=st.session_state.get("bet_cookies", ""),
+        height=100,
+        key="bet_cookies_input",
+        help="Paste the full 'cookie' request header from a logged-in 1xbet session. "
+             "Session-only, never committed or logged.",
+    )
+    st.session_state["bet_x_hd"] = st.sidebar.text_input(
+        "x-hd header",
+        value=st.session_state.get("bet_x_hd", ""),
+        key="bet_x_hd_input",
+        type="password",
+        help="Paste the 'x-hd' request header value. Session-only, never committed or logged.",
+    )
+    st.session_state["bet_user_id"] = st.sidebar.text_input(
+        "UserId",
+        value=st.session_state.get("bet_user_id", ""),
+        key="bet_user_id_input",
+        help="Numeric 1xBet account UserId (needed for live placement in a later phase).",
+    )
+    st.session_state["bet_dry_run"] = st.sidebar.checkbox(
+        "DRY RUN (build coupon, do NOT place bet)",
+        value=st.session_state.get("bet_dry_run", True),
+        key="bet_dry_run_input",
+    )
+
     # Remove page controls from here as they'll be moved below the table
 
     if option2 == "All":
@@ -544,7 +589,7 @@ def main():
             return ['color: '] * len(row)  # white
         
         # Create tabs for Matches table and Details
-        tab1, tab2, tab3 = st.tabs(["Matches", "Details", "MfB"])
+        tab1, tab2, tab3, tab4 = st.tabs(["Matches", "Details", "MfB", "Bet"])
         
         # Tab 1: Main Matches table
         with tab1:
@@ -739,6 +784,144 @@ def main():
                 column_config={k: v for k, v in column_config.items() if k != 'selected'},
                 key='mfb_all_matches'
             )
+
+        # Tab 4: Bet - per-match markets (current-half priority) + coupon PREVIEW.
+        # PHASE 1: read + display + multi-select bet-slip + dry-run coupon preview.
+        # NO network WRITE call is made anywhere here; placement is a disabled stub.
+        with tab4:
+            st.markdown("##### Per-Match Markets (current-half priority)")
+            selected_ids = st.session_state.get('selected_ids', set())
+            if not selected_ids:
+                st.info("Select one or more matches in the Matches/Details tab first.")
+            else:
+                match_choice = st.selectbox(
+                    "Match", options=sorted(selected_ids), key="bet_match_choice"
+                )
+
+                if st.button("Fetch markets", key="bet_fetch_events"):
+                    with st.spinner("Fetching markets..."):
+                        raw = fetch_game_events_sync(
+                            settings.x1_base_url,
+                            str(match_choice),
+                            proxy=settings.http_proxy,
+                        )
+                    if raw is None:
+                        st.error(
+                            "Fetch failed (network/block). "
+                            "Check SYNC_HTTP_PROXY if on Cloud."
+                        )
+                    else:
+                        st.session_state["bet_events_cache"] = parse_game_events(raw)
+                        # New fetch => drop any stale bet-slip from a prior match.
+                        st.session_state.pop("bet_slip", None)
+
+                events = st.session_state.get("bet_events_cache")
+                if events is not None and events.match_id == str(match_choice):
+                    st.caption(
+                        f"Current half: {events.current_period_name}  |  "
+                        f"Score: {events.full_score}"
+                    )
+                    groups = prioritize_markets(events)
+                    if not groups:
+                        st.warning(
+                            "None of the target markets are currently live for this match."
+                        )
+
+                    bet_slip = st.session_state.setdefault("bet_slip", [])
+                    slip_keys = {
+                        (s["group_id"], s["type"], s["parameter"], s["game_id"])
+                        for s in bet_slip
+                    }
+
+                    for group in groups:
+                        label = MARKET_GROUP_NAMES.get(group.group_id, str(group.group_id))
+                        if group.group_id == 2750:
+                            width = _interval_width(group)
+                            if width:
+                                label = f"{label} ({width:g}m)"
+                        header = f"{label}  [{group.subgame_name or 'match'}]"
+                        with st.expander(header, expanded=True):
+                            bettable = [o for o in group.outcomes if not o.blocked]
+                            if not bettable:
+                                st.caption("All outcomes currently blocked.")
+                            for outcome in bettable:
+                                param_key = outcome.parameter if outcome.parameter is not None else 0
+                                key4 = (
+                                    group.group_id,
+                                    outcome.type,
+                                    param_key,
+                                    group.subgame_id or int(match_choice),
+                                )
+                                label_txt = _outcome_label(group.group_id, outcome)
+                                cols = st.columns([4, 1])
+                                cols[0].write(f"{label_txt}  —  **{outcome.cf_view}**")
+                                checked = cols[1].checkbox(
+                                    "Add",
+                                    value=key4 in slip_keys,
+                                    key=(
+                                        f"pick_{group.group_id}_{outcome.type}_"
+                                        f"{param_key}_{group.subgame_id}"
+                                    ),
+                                )
+                                if checked and key4 not in slip_keys:
+                                    bet_slip.append({
+                                        "group_id": group.group_id,
+                                        "group_name": label,
+                                        "type": outcome.type,
+                                        "parameter": param_key,
+                                        "cf": outcome.cf,
+                                        "cf_view": outcome.cf_view,
+                                        "game_id": group.subgame_id or int(match_choice),
+                                        "label": label_txt,
+                                    })
+                                    slip_keys.add(key4)
+                                elif not checked and key4 in slip_keys:
+                                    bet_slip[:] = [
+                                        s for s in bet_slip
+                                        if (s["group_id"], s["type"], s["parameter"], s["game_id"]) != key4
+                                    ]
+                                    slip_keys.discard(key4)
+
+                    st.markdown("---")
+                    st.markdown("##### Bet Slip")
+                    if not bet_slip:
+                        st.caption("No selections yet.")
+                    else:
+                        slip_df = pd.DataFrame(bet_slip)[
+                            ["group_name", "label", "cf_view", "game_id"]
+                        ]
+                        st.dataframe(slip_df, hide_index=True, use_container_width=True)
+                        if st.button("Clear slip", key="bet_slip_clear"):
+                            st.session_state["bet_slip"] = []
+                            st.rerun()
+
+                        stake = st.number_input(
+                            "Stake (units)",
+                            min_value=1.0,
+                            value=50.0,
+                            step=1.0,
+                            key="bet_stake",
+                        )
+
+                        if st.button("Build coupon preview", key="bet_build_preview"):
+                            coupon_events = build_coupon_events(bet_slip)
+                            st.warning(
+                                "PREVIEW ONLY — live placement not yet enabled "
+                                "(needs verified payload)."
+                            )
+                            st.caption(
+                                f"Coupon that WOULD be posted "
+                                f"({len(coupon_events)} event(s), stake {stake:g}):"
+                            )
+                            st.json(coupon_events)
+
+                        # Placement is intentionally a disabled stub in Phase 1 —
+                        # no network WRITE call exists yet.
+                        st.info(
+                            "Place bet is disabled in this phase. Coupon build is "
+                            "PREVIEW ONLY; live placement arrives in a later phase "
+                            "once the write payload is verified."
+                        )
 
 if __name__ == "__main__":
     main()
