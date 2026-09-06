@@ -176,6 +176,7 @@ class JsonSyncService:
                 h2_url=m.get("h2_url") or None,
                 quick_events_url=m.get("quick_events_url") or None,
                 video=m.get("video") or None,
+                goal_up_to_min=bool(m.get("goal_up_to_min")),
             )
             # Restore accumulated state from existing server data
             state = MatchState(
@@ -347,7 +348,8 @@ class JsonSyncService:
                     # response omits them (mirrors autobet preserving
                     # quick_events_url/h1_url/h2_url across compare cycles), so
                     # the QE Link doesn't flicker once the sub-game is known.
-                    for _f in ("h1_url", "h2_url", "quick_events_url", "video"):
+                    for _f in ("h1_url", "h2_url", "quick_events_url", "video",
+                               "goal_up_to_min"):
                         if not getattr(data, _f, None) and getattr(prev_data, _f, None):
                             object.__setattr__(data, _f, getattr(prev_data, _f))
 

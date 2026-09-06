@@ -202,6 +202,11 @@ def page_load():
             label="Time",
             width=70
         ),
+        "goal_up_to_min": st.column_config.Column(
+            label="G",
+            help="Match offers the 'Goal will be scored up to a minute' market (bettable)",
+            width=30
+        ),
         "quick_events_url": st.column_config.LinkColumn(
             label="QE Link",
             display_text="QE Link",
@@ -346,6 +351,7 @@ def covert_json_to_dataframe(j_data):
             "h1_score",
             "score",
             "time_match",
+            "goal_up_to_min",
             "quick_events_url",
             "prediction",
             "h2_prediction",
@@ -376,6 +382,11 @@ def covert_json_to_dataframe(j_data):
     )
     # Missing H1 scores (pre-halftime) render blank, not the literal "None".
     df["h1_score"] = df["h1_score"].fillna("")
+    # "G" column: a check when the goal-up-to-minute market is on offer, else blank.
+    if "goal_up_to_min" in df.columns:
+        df["goal_up_to_min"] = df["goal_up_to_min"].map(
+            lambda v: "✓" if str(v) == "1" else ""
+        )
     # Score stays plain text (so it keeps its row colour and is selectable). Red
     # cards render as small red dots in narrow image columns flanking Score —
     # team1 (rc1) on the left, team2 (rc2) on the right. `score_val` mirrors the

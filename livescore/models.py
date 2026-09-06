@@ -90,6 +90,9 @@ class MatchData(BaseModel):
     quick_events_url: str | None = None
     # Live-video availability flag (1xBet "VA" field), carried through verbatim.
     video: Any = None
+    # Whether the "Goal will be scored up to a minute" market (groupId 96) is
+    # offered for this match — surfaced as the "G" column, sticky once seen.
+    goal_up_to_min: bool = False
     # Raw
     events: list[dict[str, Any]] = Field(default_factory=list)
     raw: dict[str, Any] = Field(default_factory=dict)

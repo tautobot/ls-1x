@@ -309,7 +309,10 @@ async def test_bootstrap_restores_qe_links():
     seeded = _md("778", status="h2", ts=3300, home=1, away=0, pred=2.5)
     object.__setattr__(seeded, "quick_events_url", "https://x/qe/778")
     object.__setattr__(seeded, "h1_url", "https://x/h1/778")
+    object.__setattr__(seeded, "goal_up_to_min", True)
     json_data = match_data_to_json(seeded, MatchState(prediction="2.5"))
+    check(json_data.get("goal_up_to_min") == "1",
+          "converter emits goal_up_to_min flag for the 'G' column")
     client = JsonLocalClient(db_path=DB)
     await client.post_match(SOURCE, json_data)
 
@@ -325,6 +328,8 @@ async def test_bootstrap_restores_qe_links():
         check(md.quick_events_url == "https://x/qe/778",
               "bootstrap restored quick_events_url (fixes QE Link flicker on restart)")
         check(md.h1_url == "https://x/h1/778", "bootstrap restored h1_url")
+        check(md.goal_up_to_min is True,
+              "bootstrap restored goal_up_to_min (keeps the 'G' column sticky on restart)")
 
 
 async def test_fetch_match_detail_requests_subgames():

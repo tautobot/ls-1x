@@ -522,6 +522,10 @@ class OneXBetProvider(BaseProvider):
         # Live-video availability flag (1xBet "VA"), carried through like autobet.
         video = raw.get("VA")
 
+        # Whether the "Goal will be scored up to a minute" market (G=96) is on
+        # offer — the "G" column flags matches you can bet that event on.
+        goal_up_to_min = bool(quick_markets and quick_markets.get("goal_upto_min"))
+
         return MatchData(
             source="1xbet",
             source_match_id=str(match_id),
@@ -539,6 +543,7 @@ class OneXBetProvider(BaseProvider):
             h2_url=h2_url,
             quick_events_url=quick_events_url,
             video=video,
+            goal_up_to_min=goal_up_to_min,
             total_prediction=total_prediction,
             initial_prediction=total_prediction if time_seconds <= 300 else None,
             home_possession=stats.get("home_possession"),

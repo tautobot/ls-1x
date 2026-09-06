@@ -296,6 +296,7 @@ def match_data_to_json(data: MatchData, state: MatchState) -> dict:
         "h1_url": data.h1_url or "",
         "h2_url": data.h2_url or "",
         "quick_events_url": data.quick_events_url or "",
+        "goal_up_to_min": "1" if data.goal_up_to_min else "",
         "video": _video_str(data.video),
         "status": status,
         "freeze_time": str(state.freeze_time),

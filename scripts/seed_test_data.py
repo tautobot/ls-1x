@@ -64,6 +64,8 @@ def _mk(i, risk, status=None, **extra):
         # subset of rows exercise the red-card ball badges on the Score column.
         'team1_redcard': extra.pop('team1_redcard', str(1 if i % 6 == 0 else 0)),
         'team2_redcard': extra.pop('team2_redcard', str(2 if i % 9 == 0 else 0)),
+        # Goal-up-to-minute availability flag ("1"/"") — drives the "G" column.
+        'goal_up_to_min': extra.pop('goal_up_to_min', '1' if i % 4 == 0 else ''),
     }
     # Red-card times (converter emits `rc_times` like `scores`): one clock entry
     # per red card shown, newest first — so the RCs column has data to render.
